@@ -1,6 +1,5 @@
 import { MapPin, List, Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import toast from 'react-hot-toast'
 
 export default function Locations() {
   const [upazila, setUpazila] = useState('')
@@ -81,7 +80,6 @@ export default function Locations() {
                     className="px-6 py-2 bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800 transition-colors"
                     onClick={async () => {
                       await window.api.addUpazila(upazila)
-                      toast.success('Upazilla added')
                       loadUpazilas()
                       setUpazila('')
                     }}
@@ -162,7 +160,6 @@ export default function Locations() {
                     className="px-6 py-2 bg-emerald-700 text-white rounded-lg"
                     onClick={async () => {
                       await window.api.addMouja(moujaName, selectedUpazila)
-                      toast.success('Mouja added')
                       setMoujaName('')
                       loadMoujas(selectedUpazila)
                     }}
