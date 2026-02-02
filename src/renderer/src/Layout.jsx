@@ -12,9 +12,9 @@ export default function Layout({ children }) {
   ]
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen max-h-screen overflow-y-auto bg-gray-50">
       {/* Sidebar */}
-      <aside className="w-60 bg-white border-r border-gray-200 flex flex-col">
+      <aside className="w-60 bg-white h-screen overflow-y-auto fixed border-r border-gray-200 flex flex-col">
         {/* Logo Header */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
@@ -54,7 +54,7 @@ export default function Layout({ children }) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-8 bg-gray-50">{children}</main>
+      <main className="flex-1 p-8 bg-gray-50 ml-60">{children}</main>
     </div>
   )
 }
