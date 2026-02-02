@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { getDB } from './db'
 
 function createWindow() {
   // Create the browser window.
@@ -43,9 +44,6 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
-
   createWindow()
 
   app.on('activate', function () {
@@ -57,4 +55,32 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+ipcMain.handle('add-upazilla', async (event, name) => {
+  const db = getDB()
+  const stmt = db.prepare('INSERT INTO upazilas (name) VALUES (?)')
+  stmt.run(name)
+
+  return { success: true }
+})
+
+ipcMain.handle('get-upazilas', async () => {
+  const db = getDB()
+  const stmt = db.prepare('SELECT * FROM upazilas')
+  const rows = stmt.all()
+
+  return rows
+})
+
+ipcMain.handle('add-mouja', (event, name, upazilaId) => {
+  const db = getDB()
+  db.prepare('INSERT INTO moujas (name, upazila_id) VALUES (?, ?)').run(name, upazilaId)
+
+  return { success: true }
+})
+
+ipcMain.handle('get-moujas', (event, upazilaId) => {
+  const db = getDB()
+  return db.prepare('SELECT * FROM moujas WHERE upazila_id = ?').all(upazilaId)
 })

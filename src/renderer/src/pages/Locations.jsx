@@ -1,17 +1,45 @@
 import { MapPin, List, Check } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 
 export default function Locations() {
   const [upazila, setUpazila] = useState('')
   const [moujaName, setMoujaName] = useState('')
   const [selectedUpazila, setSelectedUpazila] = useState('Dhamrai')
+  const [upazilas, setUpazilas] = useState([])
+  const [moujas, setMoujas] = useState([])
 
-  const existingUpazilas = ['Savar', 'Dhamrai', 'Keraniganj', 'fdfd', 'dfdfd']
-  const moujasInDhamrai = ['Dhamrai Town', 'Kushura']
+  const loadUpazilas = async () => {
+    const data = await window.api.getUpazilas()
+    setUpazilas(data)
+
+    if (data.length > 0) {
+      setSelectedUpazila(data[0].id)
+    }
+  }
+
+  const loadMoujas = async (upazilaId) => {
+    const data = await window.api.getMoujas(upazilaId)
+    setMoujas(data)
+  }
+
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      loadUpazilas()
+    })
+  }, [])
+
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      if (selectedUpazila) {
+        loadMoujas(selectedUpazila)
+      }
+    })
+  }, [selectedUpazila])
 
   return (
     <div className="bg-gray-50 p-8">
-      <div className="max-w-6xl">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Manage Locations</h1>
@@ -49,7 +77,15 @@ export default function Locations() {
                     onChange={(e) => setUpazila(e.target.value)}
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   />
-                  <button className="px-6 py-2 bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800 transition-colors">
+                  <button
+                    className="px-6 py-2 bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800 transition-colors"
+                    onClick={async () => {
+                      await window.api.addUpazila(upazila)
+                      toast.success('Upazilla added')
+                      loadUpazilas()
+                      setUpazila('')
+                    }}
+                  >
                     Add
                   </button>
                 </div>
@@ -58,16 +94,16 @@ export default function Locations() {
               {/* Existing Upazilas */}
               <div>
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                  Existing Upazilas (5)
+                  Existing Upazilas ({upazilas.length || 0})
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {existingUpazilas.map((name, index) => (
+                  {upazilas.map((item, index) => (
                     <div
                       key={index}
                       className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm border border-gray-200"
                     >
                       <Check size={14} className="text-gray-600" />
-                      <span>{name}</span>
+                      <span>{item.name}</span>
                     </div>
                   ))}
                 </div>
@@ -101,11 +137,13 @@ export default function Locations() {
                 <select
                   value={selectedUpazila}
                   onChange={(e) => setSelectedUpazila(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent bg-white"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                 >
-                  <option>Dhamrai</option>
-                  <option>Savar</option>
-                  <option>Keraniganj</option>
+                  {upazilas.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -120,7 +158,15 @@ export default function Locations() {
                     onChange={(e) => setMoujaName(e.target.value)}
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   />
-                  <button className="px-6 py-2 bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800 transition-colors">
+                  <button
+                    className="px-6 py-2 bg-emerald-700 text-white rounded-lg"
+                    onClick={async () => {
+                      await window.api.addMouja(moujaName, selectedUpazila)
+                      toast.success('Mouja added')
+                      setMoujaName('')
+                      loadMoujas(selectedUpazila)
+                    }}
+                  >
                     Add
                   </button>
                 </div>
@@ -128,16 +174,17 @@ export default function Locations() {
 
               {/* Moujas in Dhamrai */}
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                  Moujas in Dhamrai (2)
+                <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">
+                  Moujas ({moujas.length})
                 </h3>
+
                 <div className="flex flex-wrap gap-2">
-                  {moujasInDhamrai.map((name, index) => (
+                  {moujas.map((m) => (
                     <div
-                      key={index}
-                      className="inline-flex items-center px-3 py-2 bg-orange-50 text-orange-700 rounded-lg text-sm border border-orange-200"
+                      key={m.id}
+                      className="px-3 py-2 bg-orange-50 text-orange-700 rounded-lg text-sm border border-orange-200"
                     >
-                      {name}
+                      {m.name}
                     </div>
                   ))}
                 </div>
