@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { getDB } from './db'
+import fs from 'node:fs'
 
 function createWindow() {
   // Create the browser window.
@@ -83,4 +84,54 @@ ipcMain.handle('add-mouja', (event, name, upazilaId) => {
 ipcMain.handle('get-moujas', (event, upazilaId) => {
   const db = getDB()
   return db.prepare('SELECT * FROM moujas WHERE upazila_id = ?').all(upazilaId)
+})
+
+ipcMain.handle('upload-document', async (event, payload) => {
+  const db = getDB()
+
+  const { upazilaId, moujaId, khatianNo, dagNo, owners, files } = payload
+
+  // folder to store PDFs
+  const baseDir = join(app.getPath('userData'), 'documents')
+  if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
+
+  // create document record
+  const result = db
+    .prepare(
+      `
+    INSERT INTO documents
+    (upazila_id, mouja_id, khatian_no, dag_no)
+    VALUES (?, ?, ?, ?)
+  `
+    )
+    .run(upazilaId, moujaId, khatianNo, dagNo)
+
+  const documentId = result.lastInsertRowid
+
+  // insert owners
+  const ownerStmt = db.prepare(`
+    INSERT INTO document_owners (document_id, name)
+    VALUES (?, ?)
+  `)
+
+  for (const owner of owners) {
+    ownerStmt.run(documentId, owner)
+  }
+
+  // save files
+  const fileStmt = db.prepare(`
+    INSERT INTO document_files (document_id, file_name, file_path)
+    VALUES (?, ?, ?)
+  `)
+
+  for (const file of files) {
+    const filename = `${Date.now()}-${file.name}`
+    const filePath = join(baseDir, filename)
+
+    fs.writeFileSync(filePath, Buffer.from(file.buffer))
+
+    fileStmt.run(documentId, file.name, filePath)
+  }
+
+  return { success: true, documentId }
 })

@@ -33,6 +33,47 @@ export function getDB() {
       )
     `
     ).run()
+
+    // Documents table
+    db.prepare(
+      `
+      CREATE TABLE IF NOT EXISTS documents (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        upazila_id INTEGER NOT NULL,
+        mouja_id INTEGER NOT NULL,
+        khatian_no TEXT,
+        dag_no TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (upazila_id) REFERENCES upazilas(id) ON DELETE CASCADE,
+        FOREIGN KEY (mouja_id) REFERENCES moujas(id) ON DELETE CASCADE
+      )
+    `
+    ).run()
+
+    // Document owners table
+    db.prepare(
+      `
+      CREATE TABLE IF NOT EXISTS document_owners (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        document_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+      )
+    `
+    ).run()
+
+    // Document files table
+    db.prepare(
+      `
+      CREATE TABLE IF NOT EXISTS document_files (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        document_id INTEGER NOT NULL,
+        file_name TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+      )
+    `
+    ).run()
   }
 
   return db

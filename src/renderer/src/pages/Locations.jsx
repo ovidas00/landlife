@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 export default function Locations() {
   const [upazila, setUpazila] = useState('')
   const [moujaName, setMoujaName] = useState('')
-  const [selectedUpazila, setSelectedUpazila] = useState('Dhamrai')
+  const [selectedUpazila, setSelectedUpazila] = useState(null)
   const [upazilas, setUpazilas] = useState([])
   const [moujas, setMoujas] = useState([])
 
@@ -79,9 +79,11 @@ export default function Locations() {
                   <button
                     className="px-6 py-2 bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800 transition-colors"
                     onClick={async () => {
-                      await window.api.addUpazila(upazila)
-                      loadUpazilas()
-                      setUpazila('')
+                      if (upazila) {
+                        await window.api.addUpazila(upazila)
+                        loadUpazilas()
+                        setUpazila('')
+                      }
                     }}
                   >
                     Add
@@ -159,9 +161,11 @@ export default function Locations() {
                   <button
                     className="px-6 py-2 bg-emerald-700 text-white rounded-lg"
                     onClick={async () => {
-                      await window.api.addMouja(moujaName, selectedUpazila)
-                      setMoujaName('')
-                      loadMoujas(selectedUpazila)
+                      if (moujaName && selectedUpazila) {
+                        await window.api.addMouja(moujaName, selectedUpazila)
+                        setMoujaName('')
+                        loadMoujas(selectedUpazila)
+                      }
                     }}
                   >
                     Add
