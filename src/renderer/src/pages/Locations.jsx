@@ -1,0 +1,151 @@
+import { MapPin, List, Check } from 'lucide-react'
+import { useState } from 'react'
+
+export default function Locations() {
+  const [upazila, setUpazila] = useState('')
+  const [moujaName, setMoujaName] = useState('')
+  const [selectedUpazila, setSelectedUpazila] = useState('Dhamrai')
+
+  const existingUpazilas = ['Savar', 'Dhamrai', 'Keraniganj', 'fdfd', 'dfdfd']
+  const moujasInDhamrai = ['Dhamrai Town', 'Kushura']
+
+  return (
+    <div className="bg-gray-50 p-8">
+      <div className="max-w-6xl">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Manage Locations</h1>
+          <p className="text-gray-600">Configure administrative boundaries for document sorting.</p>
+        </div>
+
+        {/* Cards Container */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Add Upazila Card */}
+          <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
+            {/* Card Header with colored border */}
+            <div className="h-1 bg-emerald-700"></div>
+
+            <div className="p-6">
+              {/* Title */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <MapPin size={18} className="text-gray-700" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">Add Upazila</h2>
+              </div>
+
+              <p className="text-sm text-gray-600 mb-6">
+                Register a new Upazila (district subdivision).
+              </p>
+
+              {/* Input Form */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Upazila Name</label>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    placeholder="e.g. Gazipur"
+                    value={upazila}
+                    onChange={(e) => setUpazila(e.target.value)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                  />
+                  <button className="px-6 py-2 bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800 transition-colors">
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Existing Upazilas */}
+              <div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                  Existing Upazilas (5)
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {existingUpazilas.map((name, index) => (
+                    <div
+                      key={index}
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm border border-gray-200"
+                    >
+                      <Check size={14} className="text-gray-600" />
+                      <span>{name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Add Mouja Card */}
+          <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
+            {/* Card Header with colored border */}
+            <div className="h-1 bg-orange-500"></div>
+
+            <div className="p-6">
+              {/* Title */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <List size={18} className="text-gray-700" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">Add Mouja</h2>
+              </div>
+
+              <p className="text-sm text-gray-600 mb-6">
+                Add specific Moujas within a selected Upazila.
+              </p>
+
+              {/* Select Parent Upazila */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Parent Upazila
+                </label>
+                <select
+                  value={selectedUpazila}
+                  onChange={(e) => setSelectedUpazila(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent bg-white"
+                >
+                  <option>Dhamrai</option>
+                  <option>Savar</option>
+                  <option>Keraniganj</option>
+                </select>
+              </div>
+
+              {/* Mouja Name Input */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Mouja Name</label>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    placeholder="e.g. Ward 01"
+                    value={moujaName}
+                    onChange={(e) => setMoujaName(e.target.value)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                  />
+                  <button className="px-6 py-2 bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800 transition-colors">
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Moujas in Dhamrai */}
+              <div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                  Moujas in Dhamrai (2)
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {moujasInDhamrai.map((name, index) => (
+                    <div
+                      key={index}
+                      className="inline-flex items-center px-3 py-2 bg-orange-50 text-orange-700 rounded-lg text-sm border border-orange-200"
+                    >
+                      {name}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
