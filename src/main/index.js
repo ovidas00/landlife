@@ -89,7 +89,7 @@ ipcMain.handle('get-moujas', (event, upazilaId) => {
 ipcMain.handle('upload-document', async (event, payload) => {
   const db = getDB()
 
-  const { upazilaId, moujaId, khatianNo, dagNo, owners, files } = payload
+  const { upazilaId, moujaId, khatianNo, dagNo, holdingNo, owners, files } = payload
 
   // folder to store PDFs
   const baseDir = join(app.getPath('userData'), 'documents')
@@ -100,11 +100,11 @@ ipcMain.handle('upload-document', async (event, payload) => {
     .prepare(
       `
     INSERT INTO documents
-    (upazila_id, mouja_id, khatian_no, dag_no)
-    VALUES (?, ?, ?, ?)
+    (upazila_id, mouja_id, khatian_no, dag_no, holding_no)
+    VALUES (?, ?, ?, ?, ?)
   `
     )
-    .run(upazilaId, moujaId, khatianNo, dagNo)
+    .run(upazilaId, moujaId, khatianNo, dagNo, holdingNo)
 
   const documentId = result.lastInsertRowid
 

@@ -1,4 +1,4 @@
-import { Upload, Plus } from 'lucide-react'
+import { Upload, Plus, Trash2, X, File } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 
 export default function UploadDocument() {
@@ -8,6 +8,7 @@ export default function UploadDocument() {
   const [mouja, setMouja] = useState('')
   const [khatianNo, setKhatianNo] = useState('')
   const [dagNo, setDagNo] = useState('')
+  const [holdingNo, setHoldingNo] = useState('')
   const [owners, setOwners] = useState([''])
   const [files, setFiles] = useState([])
   const [loading, setLoading] = useState(false)
@@ -15,6 +16,10 @@ export default function UploadDocument() {
   const fileInputRef = useRef(null)
 
   const addOwner = () => setOwners([...owners, ''])
+
+  const removeOwner = (index) => {
+    setOwners(owners.filter((_, i) => i !== index))
+  }
 
   const updateOwner = (index, value) => {
     const newOwners = [...owners]
@@ -71,6 +76,18 @@ export default function UploadDocument() {
       return
     }
 
+    const validOwners = owners.filter((o) => o.trim() !== '')
+
+    if (!khatianNo || !dagNo || !validOwners.length) {
+      alert('Please enter land records')
+      return
+    }
+
+    if (!files.length) {
+      alert('Please upload at least one document')
+      return
+    }
+
     setLoading(true)
 
     const payload = {
@@ -78,6 +95,7 @@ export default function UploadDocument() {
       moujaId: mouja,
       khatianNo,
       dagNo,
+      holdingNo,
       owners: owners.filter((o) => o.trim() !== ''),
       files
     }
@@ -101,11 +119,11 @@ export default function UploadDocument() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="bg-gray-100 p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-emerald-800 mb-3">Upload Document</h1>
+          <h1 className="text-4xl font-bold text-grey-900 mb-3">Upload Document</h1>
           <p className="text-gray-600">Register new land documents to the secure archive.</p>
         </div>
 
@@ -155,7 +173,7 @@ export default function UploadDocument() {
               <div className="p-6 space-y-4">
                 <h2 className="text-xl font-bold text-emerald-800">Land Records</h2>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <input
                     placeholder="Khatian No"
                     value={khatianNo}
@@ -168,24 +186,40 @@ export default function UploadDocument() {
                     onChange={(e) => setDagNo(e.target.value)}
                     className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent rounded-lg"
                   />
+                  <input
+                    placeholder="Holding No"
+                    value={holdingNo}
+                    onChange={(e) => setHoldingNo(e.target.value)}
+                    className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent rounded-lg"
+                  />
                 </div>
 
                 <div>
-                  <div className="flex justify-between mb-2">
-                    <label>Owner Name(s)</label>
-                    <button onClick={addOwner} className="text-emerald-700 flex gap-1">
-                      <Plus size={16} /> Add
-                    </button>
-                  </div>
+                  <label className="block mb-2">Owner Name(s)</label>
 
                   {owners.map((owner, i) => (
-                    <input
-                      key={i}
-                      placeholder={`Owner ${i + 1}`}
-                      value={owner}
-                      onChange={(e) => updateOwner(i, e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent rounded-lg mb-2"
-                    />
+                    <div key={i} className="flex space-y-2 mb-2">
+                      <input
+                        placeholder={`Owner ${i + 1}`}
+                        value={owner}
+                        onChange={(e) => updateOwner(i, e.target.value)}
+                        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                      />
+
+                      {/* Add button only on first row */}
+                      {i === 0 && (
+                        <button onClick={addOwner} className="p-2 text-emerald-700">
+                          <Plus size={20} />
+                        </button>
+                      )}
+
+                      {/* Remove buttons for others */}
+                      {i > 0 && (
+                        <button onClick={() => removeOwner(i)} className="p-2 text-red-500">
+                          <Trash2 size={20} />
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -223,8 +257,13 @@ export default function UploadDocument() {
                 <div className="mt-4 space-y-2">
                   {files.map((f, i) => (
                     <div key={i} className="flex justify-between bg-gray-100 p-2 rounded">
-                      <span>{f.name}</span>
-                      <button onClick={() => removeFile(i)}>✕</button>
+                      <div className="flex items-center gap-2">
+                        <File size={20} />
+                        <span>{f.name}</span>
+                      </div>
+                      <button onClick={() => removeFile(i)}>
+                        <X size={18} />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -233,7 +272,7 @@ export default function UploadDocument() {
               <button
                 onClick={submitDocument}
                 disabled={loading}
-                className="mt-6 w-full bg-emerald-700 text-white py-3 rounded-lg hover:bg-emerald-800 disabled:opacity-50"
+                className="mt-6 w-full bg-emerald-700 text-white py-3 rounded-lg hover:bg-emerald-800 disabled:opacity-50 font-bold"
               >
                 {loading ? 'Uploading...' : 'Submit Document'}
               </button>

@@ -1,4 +1,4 @@
-import { LayoutGrid, Upload, Search, MapPin } from 'lucide-react'
+import { LayoutGrid, Upload, Search, MapPin, Leaf } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 
 export default function Layout({ children }) {
@@ -12,14 +12,14 @@ export default function Layout({ children }) {
   ]
 
   return (
-    <div className="flex h-screen max-h-screen overflow-y-auto bg-gray-50">
+    <div className="flex h-screen max-h-screen overflow-y-auto bg-gray-100">
       {/* Sidebar */}
       <aside className="w-60 bg-white h-screen overflow-y-auto fixed border-r border-gray-200 flex flex-col">
         {/* Logo Header */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-800 rounded-full flex items-center justify-center">
-              <div className="w-6 h-6 border-2 border-white rounded-full"></div>
+            <div className="w-10 h-10 bg-emerald-800 rounded-lg flex items-center justify-center text-white">
+              <Leaf size={24} />
             </div>
             <div>
               <h1 className="text-lg font-bold text-gray-900">LandLife</h1>
@@ -54,7 +54,7 @@ export default function Layout({ children }) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-8 bg-gray-50 ml-60">{children}</main>
+      <main className="flex-1 p-8 bg-gray-100 ml-60">{children}</main>
     </div>
   )
 }

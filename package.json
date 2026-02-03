@@ -23,7 +23,6 @@
     "@tailwindcss/vite": "^4.1.18",
     "better-sqlite3": "^12.6.2",
     "lucide-react": "^0.563.0",
-    "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.13.0",
     "tailwindcss": "^4.1.18"
   },

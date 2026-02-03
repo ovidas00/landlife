@@ -37,7 +37,7 @@ export default function Locations() {
   }, [selectedUpazila])
 
   return (
-    <div className="bg-gray-50 p-8">
+    <div className="bg-gray-100 p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
