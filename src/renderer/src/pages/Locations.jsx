@@ -114,7 +114,7 @@ export default function Locations() {
           {/* Add Mouja Card */}
           <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
             {/* Card Header with colored border */}
-            <div className="h-1 bg-orange-500"></div>
+            <div className="h-1 bg-gradient-to-r from-emerald-600 to-orange-500"></div>
 
             <div className="p-6">
               {/* Title */}

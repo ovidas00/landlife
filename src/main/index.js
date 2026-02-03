@@ -135,3 +135,99 @@ ipcMain.handle('upload-document', async (event, payload) => {
 
   return { success: true, documentId }
 })
+
+ipcMain.handle('get-documents', async (event, filters = {}) => {
+  const db = getDB()
+  const { upazilaId, moujaId, searchQuery } = filters
+
+  const conditions = []
+  const params = []
+
+  // Upazila filter
+  if (upazilaId) {
+    conditions.push('d.upazila_id = ?')
+    params.push(upazilaId)
+  }
+
+  // Mouja filter
+  if (moujaId) {
+    conditions.push('d.mouja_id = ?')
+    params.push(moujaId)
+  }
+
+  // Search filter: owner, khatian, dag, holding
+  if (searchQuery) {
+    const q = `%${searchQuery.toLowerCase()}%`
+    conditions.push(`
+      (
+        EXISTS (
+          SELECT 1
+          FROM document_owners o
+          WHERE o.document_id = d.id
+            AND LOWER(o.name) LIKE ?
+        )
+        OR LOWER(d.khatian_no) LIKE ?
+        OR LOWER(d.dag_no) LIKE ?
+        OR LOWER(d.holding_no) LIKE ?
+      )
+    `)
+    params.push(q, q, q, q)
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+  // Main query: documents + upazila/mouja names + aggregated owners/files
+  const documents = db
+    .prepare(
+      `
+    SELECT 
+      d.id,
+      d.upazila_id,
+      d.mouja_id,
+      d.khatian_no,
+      d.dag_no,
+      d.holding_no,
+      d.created_at,
+      u.name AS upazilaName,
+      m.name AS moujaName,
+      COALESCE(o.owners, '') AS owners,
+      COALESCE(f.files, '') AS files
+    FROM documents d
+    LEFT JOIN upazilas u ON d.upazila_id = u.id
+    LEFT JOIN moujas m ON d.mouja_id = m.id
+    LEFT JOIN (
+      SELECT document_id, GROUP_CONCAT(name, '|') AS owners
+      FROM document_owners
+      GROUP BY document_id
+    ) o ON o.document_id = d.id
+    LEFT JOIN (
+      SELECT document_id, GROUP_CONCAT(id || '::' || file_name || '::' || file_path, '|') AS files
+      FROM document_files
+      GROUP BY document_id
+    ) f ON f.document_id = d.id
+    ${whereClause}
+    ORDER BY d.id DESC
+    LIMIT 30
+  `
+    )
+    .all(...params)
+
+  // Transform owners/files from strings to arrays
+  const result = documents.map((doc) => {
+    const owners = doc.owners ? doc.owners.split('|') : []
+    const files = doc.files
+      ? doc.files.split('|').map((str) => {
+          const [id, file_name, file_path] = str.split('::')
+          return { id: parseInt(id), file_name, file_path }
+        })
+      : []
+
+    return {
+      ...doc,
+      owners,
+      files
+    }
+  })
+
+  return result
+})

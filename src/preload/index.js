@@ -19,5 +19,7 @@ contextBridge.exposeInMainWorld('api', {
       ...data,
       files
     })
-  }
+  },
+
+  getDocuments: (filters = {}) => ipcRenderer.invoke('get-documents', filters)
 })

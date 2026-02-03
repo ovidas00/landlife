@@ -228,7 +228,7 @@ export default function UploadDocument() {
 
           {/* RIGHT */}
           <div className="bg-white rounded-xl shadow-sm border-2 border-gray-200 shadow-sm overflow-hidden">
-            <div className="h-1 bg-gray-200"></div>
+            <div className="h-1 bg-gradient-to-r from-emerald-600 to-orange-500"></div>
 
             <div className="p-6">
               <h2 className="text-xl font-bold text-emerald-800 mb-4">Document Scans</h2>
