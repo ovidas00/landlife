@@ -236,3 +236,37 @@ ipcMain.handle('open-file', async (event, filePath) => {
   if (!filePath) return
   await shell.openPath(filePath) // opens PDF in default system app
 })
+
+ipcMain.handle('get-dashboard-state', async () => {
+  const db = getDB()
+
+  // Total documents
+  const totalDocuments = db.prepare(`SELECT COUNT(*) AS count FROM documents`).get().count
+
+  // Total files
+  const totalFiles = db.prepare(`SELECT COUNT(*) AS count FROM document_files`).get().count
+
+  // Total upazilas
+  const totalUpazilas = db.prepare(`SELECT COUNT(*) AS count FROM upazilas`).get().count
+
+  // Document count by upazila
+  const docsByUpazila = db
+    .prepare(
+      `
+      SELECT u.name AS upazila, COUNT(d.id) AS documentCount
+      FROM upazilas u
+      LEFT JOIN documents d ON d.upazila_id = u.id
+      GROUP BY u.id
+      ORDER BY u.name
+    `
+    )
+    .all()
+
+  return {
+    totalDocuments,
+    totalFiles,
+    totalUpazilas,
+    uniqueOwners: totalDocuments,
+    docsByUpazila
+  }
+})
