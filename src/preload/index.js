@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer, shell } = require('electron')
+const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('api', {
   addUpazila: (name) => ipcRenderer.invoke('add-upazilla', name),
@@ -21,5 +21,5 @@ contextBridge.exposeInMainWorld('api', {
     })
   },
   getDocuments: (filters = {}) => ipcRenderer.invoke('get-documents', filters),
-  openFile: (filePath) => shell.openPath(filePath)
+  openFile: (filePath) => ipcRenderer.invoke('open-file', filePath)
 })

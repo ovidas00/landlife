@@ -231,3 +231,8 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
 
   return result
 })
+
+ipcMain.handle('open-file', async (event, filePath) => {
+  if (!filePath) return
+  await shell.openPath(filePath) // opens PDF in default system app
+})
