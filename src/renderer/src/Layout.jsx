@@ -1,5 +1,6 @@
-import { LayoutGrid, Upload, Search, MapPin, Leaf } from 'lucide-react'
+import { LayoutGrid, Upload, Search, MapPin, DatabaseBackup } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
+import itLogo from '../../../resources/it-logo.png'
 
 export default function Layout({ children }) {
   const location = useLocation() // gives current URL path
@@ -8,7 +9,8 @@ export default function Layout({ children }) {
     { to: '/', icon: <LayoutGrid size={18} />, label: 'Dashboard' },
     { to: '/upload', icon: <Upload size={18} />, label: 'Upload Document' },
     { to: '/search', icon: <Search size={18} />, label: 'Search Records' },
-    { to: '/locations', icon: <MapPin size={18} />, label: 'Manage Locations' }
+    { to: '/locations', icon: <MapPin size={18} />, label: 'Manage Locations' },
+    { to: '/export', icon: <DatabaseBackup size={18} />, label: 'Backup/Export' }
   ]
 
   return (
@@ -18,11 +20,11 @@ export default function Layout({ children }) {
         {/* Logo Header */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-800 rounded-lg flex items-center justify-center text-white">
-              <Leaf size={24} />
+            <div className="w-10 h-10 bg-emerald-800 rounded-lg flex items-center justify-center text-white p-1">
+              <img src={itLogo} alt="logo" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">LandLife</h1>
+              <h1 className="text-lg font-bold text-gray-900">Edulife</h1>
               <p className="text-xs text-gray-500">Document System</p>
             </div>
           </div>

@@ -14,6 +14,7 @@ function App() {
           <Route path="/upload" element={<UploadDocument />} />
           <Route path="/search" element={<RecordsSearch />} />
           <Route path="/locations" element={<Locations />} />
+          <Route path="/export" element={<h1>Backup/Export</h1>} />
         </Routes>
       </Layout>
     </Router>
