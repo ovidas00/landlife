@@ -159,16 +159,16 @@ export default function UploadDocument() {
 
                 <div className="grid grid-cols-3 gap-4">
                   <input
-                    placeholder="Holding No"
-                    value={holdingNo}
-                    onChange={(e) => setHoldingNo(e.target.value)}
+                    placeholder="Khatian No"
+                    value={khatianNo}
+                    onChange={(e) => setKhatianNo(e.target.value)}
                     className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
                   />
 
                   <input
-                    placeholder="Khatian No"
-                    value={khatianNo}
-                    onChange={(e) => setKhatianNo(e.target.value)}
+                    placeholder="Holding No"
+                    value={holdingNo}
+                    onChange={(e) => setHoldingNo(e.target.value)}
                     className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
                   />
 

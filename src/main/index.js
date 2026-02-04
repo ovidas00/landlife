@@ -132,7 +132,9 @@ ipcMain.handle('upload-document', async (event, payload) => {
 ipcMain.handle('get-documents', async (event, filters = {}) => {
   const db = getDB()
 
-  const { upazilaId, moujaId, docType, searchQuery } = filters
+  const { upazilaId, moujaId, docType, searchQuery, page = 1, pageSize = 50 } = filters
+
+  const offset = (page - 1) * pageSize
 
   const conditions = []
   const params = []
@@ -170,6 +172,7 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
+  // Fetch documents with pagination
   const documents = db
     .prepare(
       `
@@ -196,11 +199,12 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
       ) f ON f.document_id = d.id
       ${whereClause}
       ORDER BY d.id DESC
-      LIMIT 100
+      LIMIT ? OFFSET ?
     `
     )
-    .all(...params)
+    .all(...params, pageSize, offset)
 
+  // Map files
   const result = documents.map((doc) => {
     const files = doc.files
       ? doc.files.split('|').map((str) => {
@@ -209,13 +213,15 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
         })
       : []
 
-    return {
-      ...doc,
-      files
-    }
+    return { ...doc, files }
   })
 
-  return result
+  // Optional: total count for frontend pagination
+  const total = db
+    .prepare(`SELECT COUNT(*) as count FROM documents d ${whereClause}`)
+    .get(...params).count
+
+  return { data: result, total, page, pageSize }
 })
 
 ipcMain.handle('open-file', async (event, filePath) => {

@@ -1,4 +1,4 @@
-import { Search, FileText } from 'lucide-react'
+import { Search, FileText, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 import FilesModal from '../components/FilesModal'
 
@@ -14,9 +14,14 @@ export default function RecordsSearch() {
   const [modalOpen, setModalOpen] = useState(false)
   const [currentFiles, setCurrentFiles] = useState([])
 
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const [pageSize] = useState(50)
+  const [total, setTotal] = useState(0)
+
   const searchTimeout = useRef(null)
 
-  // Load all upazilas on mount
+  // Load upazilas
   useEffect(() => {
     const loadUpazilas = async () => {
       const data = await window.api.getUpazilas()
@@ -25,7 +30,7 @@ export default function RecordsSearch() {
     loadUpazilas()
   }, [])
 
-  // Load moujas whenever upazila changes
+  // Load moujas on upazila change
   useEffect(() => {
     const loadMoujas = async () => {
       if (!selectedUpazila) {
@@ -40,22 +45,20 @@ export default function RecordsSearch() {
     loadMoujas()
   }, [selectedUpazila])
 
-  // Load documents whenever filters or searchQuery changes
+  // Load documents whenever filters, searchQuery, or page changes
   useEffect(() => {
-    // Debounce search to reduce backend calls
     if (searchTimeout.current) clearTimeout(searchTimeout.current)
     searchTimeout.current = setTimeout(() => {
       loadDocuments()
-    }, 300) // 300ms delay
-  }, [selectedUpazila, selectedMouja, searchQuery, selectedDocType])
+    }, 300)
+  }, [selectedUpazila, selectedMouja, searchQuery, selectedDocType, page])
 
   const loadDocuments = async () => {
     setLoading(true)
     try {
-      const filters = {}
+      const filters = { page, pageSize }
       if (selectedDocType) filters.docType = selectedDocType
       if (searchQuery) filters.searchQuery = searchQuery
-
       if (selectedUpazila) filters.upazilaId = selectedUpazila
       if (selectedMouja) filters.moujaId = selectedMouja
 
@@ -76,9 +79,11 @@ export default function RecordsSearch() {
       }))
 
       setRecords(formatted)
+      setTotal(res.total ?? formatted.length)
     } catch (err) {
       console.error('Failed to load documents:', err)
       setRecords([])
+      setTotal(0)
     } finally {
       setLoading(false)
     }
@@ -91,15 +96,16 @@ export default function RecordsSearch() {
     not_found: 'bg-gray-100 text-gray-800'
   }
   const docTypeLabels = {
-    usable: 'Usable Records',
-    unusable: 'Unusable Records',
-    moderate: 'Moderately Usable',
-    not_found: 'Not Found Records'
+    usable: 'Usable',
+    unusable: 'Unusable',
+    moderate: 'Moderate',
+    not_found: 'Not Found'
   }
+
+  const totalPages = Math.ceil(total / pageSize)
 
   return (
     <>
-      {/* Files modal */}
       <FilesModal files={currentFiles} isOpen={modalOpen} onClose={() => setModalOpen(false)} />
 
       <div className="bg-gray-100 p-8">
@@ -114,7 +120,7 @@ export default function RecordsSearch() {
             </div>
           </div>
 
-          {/* Filter Card */}
+          {/* Filters */}
           <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden mb-6">
             <div className="h-1 bg-gradient-to-r from-emerald-600 to-orange-500"></div>
             <div className="p-6">
@@ -157,6 +163,7 @@ export default function RecordsSearch() {
                   </select>
                 </div>
 
+                {/* Document Type */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Document Type
@@ -164,7 +171,7 @@ export default function RecordsSearch() {
                   <select
                     value={selectedDocType}
                     onChange={(e) => setSelectedDocType(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                    className="w-full px-4 py-2.5 border whitespace-nowrap border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   >
                     <option value="">All Type</option>
                     <option value="usable">Usable Records</option>
@@ -210,7 +217,6 @@ export default function RecordsSearch() {
                     Khatian / Holding / Dag
                   </th>
                   <th className="text-left px-6 py-4 text-sm font-semibold w-2/12">Doc Type</th>
-
                   <th className="text-left px-6 py-4 text-sm font-semibold w-3/12">Files</th>
                 </tr>
               </thead>
@@ -219,32 +225,32 @@ export default function RecordsSearch() {
                 {!loading && records.length > 0 ? (
                   records.map((record, index) => (
                     <tr key={record.id} className="border-b border-gray-200 hover:bg-gray-50">
-                      <td className="px-6 py-5 font-semibold">{index + 1}</td>
+                      <td className="px-6 py-5 font-semibold">
+                        {(page - 1) * pageSize + index + 1}
+                      </td>
                       <td className="px-6 py-5">
                         <p className="font-semibold">{record.upazila}</p>
                         <p className="text-sm text-gray-600">{record.mouja}</p>
                       </td>
-                      <td className="px-6 py-5">
-                        <div className="flex gap-1 flex-wrap">
-                          {record.khatian && (
-                            <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
-                              <span className="font-medium text-gray-600">K:</span>
-                              {record.khatian}
-                            </div>
-                          )}
-                          {record.holding && (
-                            <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
-                              <span className="font-medium text-gray-600">H:</span>
-                              {record.holding}
-                            </div>
-                          )}
-                          {record.dag && (
-                            <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
-                              <span className="font-medium text-gray-600">D:</span>
-                              {record.dag}
-                            </div>
-                          )}
-                        </div>
+                      <td className="px-6 py-5 flex gap-1 flex-wrap">
+                        {record.khatian && (
+                          <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
+                            <span className="font-medium text-gray-600">K:</span>
+                            {record.khatian}
+                          </div>
+                        )}
+                        {record.holding && (
+                          <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
+                            <span className="font-medium text-gray-600">H:</span>
+                            {record.holding}
+                          </div>
+                        )}
+                        {record.dag && (
+                          <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
+                            <span className="font-medium text-gray-600">D:</span>
+                            {record.dag}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-5">
                         {record.doc_type ? (
@@ -280,6 +286,29 @@ export default function RecordsSearch() {
                 )}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {!loading && totalPages > 1 && (
+              <div className="flex justify-end items-center gap-2 p-4 border-t border-gray-200">
+                <button
+                  className="p-2 border rounded-lg disabled:opacity-50"
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="text-sm">
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  className="p-2 border rounded-lg disabled:opacity-50"
+                  disabled={page === totalPages}
+                  onClick={() => setPage(page + 1)}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
