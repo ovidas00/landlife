@@ -7,6 +7,7 @@ export default function RecordsSearch() {
   const [moujas, setMoujas] = useState([])
   const [selectedUpazila, setSelectedUpazila] = useState('')
   const [selectedMouja, setSelectedMouja] = useState('')
+  const [selectedDocType, setSelectedDocType] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
@@ -46,21 +47,24 @@ export default function RecordsSearch() {
     searchTimeout.current = setTimeout(() => {
       loadDocuments()
     }, 300) // 300ms delay
-  }, [selectedUpazila, selectedMouja, searchQuery])
+  }, [selectedUpazila, selectedMouja, searchQuery, selectedDocType])
 
   const loadDocuments = async () => {
     setLoading(true)
     try {
       const filters = {}
+      if (selectedDocType) filters.docType = selectedDocType
+      if (searchQuery) filters.searchQuery = searchQuery
+
       if (selectedUpazila) filters.upazilaId = selectedUpazila
       if (selectedMouja) filters.moujaId = selectedMouja
-      if (searchQuery) filters.searchQuery = searchQuery
 
       const res = await window.api.getDocuments(filters)
       const docs = res?.data ?? res
 
       const formatted = docs.map((doc) => ({
         id: doc.id,
+        doc_type: doc.doc_type,
         upazila: doc.upazilaName,
         mouja: doc.moujaName,
         khatian: doc.khatian_no,
@@ -78,6 +82,19 @@ export default function RecordsSearch() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const docTypeColors = {
+    usable: 'bg-emerald-100 text-emerald-800',
+    unusable: 'bg-red-100 text-red-800',
+    moderate: 'bg-yellow-100 text-yellow-800',
+    not_found: 'bg-gray-100 text-gray-800'
+  }
+  const docTypeLabels = {
+    usable: 'Usable Records',
+    unusable: 'Unusable Records',
+    moderate: 'Moderately Usable',
+    not_found: 'Not Found Records'
   }
 
   return (
@@ -101,7 +118,7 @@ export default function RecordsSearch() {
           <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden mb-6">
             <div className="h-1 bg-gradient-to-r from-emerald-600 to-orange-500"></div>
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {/* Upazila */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -140,6 +157,23 @@ export default function RecordsSearch() {
                   </select>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Document Type
+                  </label>
+                  <select
+                    value={selectedDocType}
+                    onChange={(e) => setSelectedDocType(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                  >
+                    <option value="">All Type</option>
+                    <option value="usable">Usable Records</option>
+                    <option value="unusable">Unusable Records</option>
+                    <option value="moderate">Moderately Usable</option>
+                    <option value="not_found">Not Found Records</option>
+                  </select>
+                </div>
+
                 {/* Search */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -152,7 +186,7 @@ export default function RecordsSearch() {
                     />
                     <input
                       type="text"
-                      placeholder="Owner, Khatian, Dag or Holding..."
+                      placeholder="Khatian, Holding or Dag..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
@@ -165,55 +199,65 @@ export default function RecordsSearch() {
 
           {/* Results Table */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="bg-gray-50 border-b border-gray-200">
-              <div className="grid grid-cols-12 gap-4 px-6 py-4">
-                <div className="col-span-3 text-sm font-semibold">Upazila / Mouja</div>
-                <div className="col-span-3 text-sm font-semibold">Khatian / Dag / Holding</div>
-                <div className="col-span-3 text-sm font-semibold">Owner Name(s)</div>
-                <div className="col-span-3 text-sm font-semibold">Files</div>
-              </div>
-            </div>
+            <table className="w-full border-collapse">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left px-6 py-4 text-sm font-semibold w-1/12">Serial</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold w-3/12">
+                    Upazila / Mouja
+                  </th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold w-3/12">
+                    Khatian / Holding / Dag
+                  </th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold w-2/12">Doc Type</th>
 
-            <div>
-              {loading && <div className="p-8 text-center text-gray-500">Loading documents...</div>}
+                  <th className="text-left px-6 py-4 text-sm font-semibold w-3/12">Files</th>
+                </tr>
+              </thead>
 
-              {!loading && records.length === 0 && (
-                <div className="p-8 text-center text-gray-500">No records found.</div>
-              )}
-
-              {!loading &&
-                records.map((record) => (
-                  <div key={record.id} className="border-b border-gray-200 hover:bg-gray-50">
-                    <div className="grid grid-cols-12 gap-4 px-6 py-5 items-center">
-                      <div className="col-span-3">
+              <tbody>
+                {!loading && records.length > 0 ? (
+                  records.map((record, index) => (
+                    <tr key={record.id} className="border-b border-gray-200 hover:bg-gray-50">
+                      <td className="px-6 py-5 font-semibold">{index + 1}</td>
+                      <td className="px-6 py-5">
                         <p className="font-semibold">{record.upazila}</p>
                         <p className="text-sm text-gray-600">{record.mouja}</p>
-                      </div>
-
-                      <div className="col-span-3 flex gap-1">
-                        <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
-                          <span className="font-medium text-gray-600">K:</span>
-                          {record.khatian}
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex gap-1 flex-wrap">
+                          {record.khatian && (
+                            <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
+                              <span className="font-medium text-gray-600">K:</span>
+                              {record.khatian}
+                            </div>
+                          )}
+                          {record.holding && (
+                            <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
+                              <span className="font-medium text-gray-600">H:</span>
+                              {record.holding}
+                            </div>
+                          )}
+                          {record.dag && (
+                            <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
+                              <span className="font-medium text-gray-600">D:</span>
+                              {record.dag}
+                            </div>
+                          )}
                         </div>
-                        <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
-                          <span className="font-medium text-gray-600">D:</span>
-                          {record.dag}
-                        </div>
-                        {record.holding && (
-                          <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
-                            <span className="font-medium text-gray-600">H:</span>
-                            {record.holding}
-                          </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        {record.doc_type ? (
+                          <span
+                            className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${docTypeColors[record.doc_type]}`}
+                          >
+                            {docTypeLabels[record.doc_type]}
+                          </span>
+                        ) : (
+                          '—'
                         )}
-                      </div>
-
-                      <div className="col-span-3">
-                        <span className="px-3 py-1.5 bg-gray-100 rounded-lg text-sm">
-                          {record.owner}
-                        </span>
-                      </div>
-
-                      <div className="col-span-3">
+                      </td>
+                      <td className="px-6 py-5">
                         <button
                           className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm"
                           onClick={() => {
@@ -224,11 +268,18 @@ export default function RecordsSearch() {
                           <FileText size={16} />
                           Files ({record.fileCount})
                         </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="text-center py-8 text-gray-500">
+                      {loading ? 'Loading documents...' : 'No documents found!'}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

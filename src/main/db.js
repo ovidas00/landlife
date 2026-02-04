@@ -9,7 +9,7 @@ export function getDB() {
     const dbPath = path.join(app.getPath('userData'), 'app.db')
     db = new Database(dbPath)
 
-    // Enable foreign keys (important!)
+    // Enable foreign keys
     db.pragma('foreign_keys = ON')
 
     // Upazilas table
@@ -22,7 +22,7 @@ export function getDB() {
     `
     ).run()
 
-    // Moujas table (linked to upazila)
+    // Moujas table
     db.prepare(
       `
       CREATE TABLE IF NOT EXISTS moujas (
@@ -34,7 +34,7 @@ export function getDB() {
     `
     ).run()
 
-    // Documents table
+    // Documents table (updated)
     db.prepare(
       `
       CREATE TABLE IF NOT EXISTS documents (
@@ -44,21 +44,10 @@ export function getDB() {
         khatian_no TEXT,
         dag_no TEXT,
         holding_no TEXT,
+        doc_type TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (upazila_id) REFERENCES upazilas(id) ON DELETE CASCADE,
         FOREIGN KEY (mouja_id) REFERENCES moujas(id) ON DELETE CASCADE
-      )
-    `
-    ).run()
-
-    // Document owners table
-    db.prepare(
-      `
-      CREATE TABLE IF NOT EXISTS document_owners (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        document_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
       )
     `
     ).run()

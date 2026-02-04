@@ -7,8 +7,8 @@ export default function Layout({ children }) {
 
   const navLinks = [
     { to: '/', icon: <LayoutGrid size={18} />, label: 'Dashboard' },
-    { to: '/upload', icon: <Upload size={18} />, label: 'Upload Document' },
     { to: '/search', icon: <Search size={18} />, label: 'Search Records' },
+    { to: '/upload', icon: <Upload size={18} />, label: 'Upload Document' },
     { to: '/locations', icon: <MapPin size={18} />, label: 'Manage Locations' },
     { to: '/export', icon: <DatabaseBackup size={18} />, label: 'Backup/Export' }
   ]

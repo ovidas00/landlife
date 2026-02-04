@@ -92,7 +92,7 @@ ipcMain.handle('get-moujas', (event, upazilaId) => {
 ipcMain.handle('upload-document', async (event, payload) => {
   const db = getDB()
 
-  const { upazilaId, moujaId, khatianNo, dagNo, holdingNo, owners, files } = payload
+  const { upazilaId, moujaId, khatianNo, dagNo, holdingNo, docType, files } = payload
 
   // folder to store PDFs
   const baseDir = join(app.getPath('userData'), 'documents')
@@ -102,32 +102,22 @@ ipcMain.handle('upload-document', async (event, payload) => {
   const result = db
     .prepare(
       `
-    INSERT INTO documents
-    (upazila_id, mouja_id, khatian_no, dag_no, holding_no)
-    VALUES (?, ?, ?, ?, ?)
-  `
+      INSERT INTO documents
+      (upazila_id, mouja_id, khatian_no, dag_no, holding_no, doc_type)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `
     )
-    .run(upazilaId, moujaId, khatianNo, dagNo, holdingNo)
+    .run(upazilaId, moujaId, khatianNo, dagNo, holdingNo, docType)
 
   const documentId = result.lastInsertRowid
 
-  // insert owners
-  const ownerStmt = db.prepare(`
-    INSERT INTO document_owners (document_id, name)
-    VALUES (?, ?)
-  `)
-
-  for (const owner of owners) {
-    ownerStmt.run(documentId, owner)
-  }
-
-  // save files
+  // save files (skip if none — allowed for "not_found")
   const fileStmt = db.prepare(`
     INSERT INTO document_files (document_id, file_name, file_path)
     VALUES (?, ?, ?)
   `)
 
-  for (const file of files) {
+  for (const file of files || []) {
     const filename = `${Date.now()}-${file.name}`
     const filePath = join(baseDir, filename)
 
@@ -141,7 +131,8 @@ ipcMain.handle('upload-document', async (event, payload) => {
 
 ipcMain.handle('get-documents', async (event, filters = {}) => {
   const db = getDB()
-  const { upazilaId, moujaId, searchQuery } = filters
+
+  const { upazilaId, moujaId, docType, searchQuery } = filters
 
   const conditions = []
   const params = []
@@ -158,66 +149,59 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
     params.push(moujaId)
   }
 
-  // Search filter: owner, khatian, dag, holding
+  // Document type filter
+  if (docType) {
+    conditions.push('d.doc_type = ?')
+    params.push(docType)
+  }
+
+  // Search filter
   if (searchQuery) {
     const q = `%${searchQuery.toLowerCase()}%`
     conditions.push(`
       (
-        EXISTS (
-          SELECT 1
-          FROM document_owners o
-          WHERE o.document_id = d.id
-            AND LOWER(o.name) LIKE ?
-        )
-        OR LOWER(d.khatian_no) LIKE ?
+        LOWER(d.khatian_no) LIKE ?
         OR LOWER(d.dag_no) LIKE ?
         OR LOWER(d.holding_no) LIKE ?
       )
     `)
-    params.push(q, q, q, q)
+    params.push(q, q, q)
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
-  // Main query: documents + upazila/mouja names + aggregated owners/files
   const documents = db
     .prepare(
       `
-    SELECT 
-      d.id,
-      d.upazila_id,
-      d.mouja_id,
-      d.khatian_no,
-      d.dag_no,
-      d.holding_no,
-      d.created_at,
-      u.name AS upazilaName,
-      m.name AS moujaName,
-      COALESCE(o.owners, '') AS owners,
-      COALESCE(f.files, '') AS files
-    FROM documents d
-    LEFT JOIN upazilas u ON d.upazila_id = u.id
-    LEFT JOIN moujas m ON d.mouja_id = m.id
-    LEFT JOIN (
-      SELECT document_id, GROUP_CONCAT(name, '|') AS owners
-      FROM document_owners
-      GROUP BY document_id
-    ) o ON o.document_id = d.id
-    LEFT JOIN (
-      SELECT document_id, GROUP_CONCAT(id || '::' || file_name || '::' || file_path, '|') AS files
-      FROM document_files
-      GROUP BY document_id
-    ) f ON f.document_id = d.id
-    ${whereClause}
-    ORDER BY d.id DESC
-    LIMIT 30
-  `
+      SELECT 
+        d.id,
+        d.upazila_id,
+        d.mouja_id,
+        d.khatian_no,
+        d.dag_no,
+        d.holding_no,
+        d.doc_type,
+        d.created_at,
+        u.name AS upazilaName,
+        m.name AS moujaName,
+        COALESCE(f.files, '') AS files
+      FROM documents d
+      LEFT JOIN upazilas u ON d.upazila_id = u.id
+      LEFT JOIN moujas m ON d.mouja_id = m.id
+      LEFT JOIN (
+        SELECT document_id,
+          GROUP_CONCAT(id || '::' || file_name || '::' || file_path, '|') AS files
+        FROM document_files
+        GROUP BY document_id
+      ) f ON f.document_id = d.id
+      ${whereClause}
+      ORDER BY d.id DESC
+      LIMIT 100
+    `
     )
     .all(...params)
 
-  // Transform owners/files from strings to arrays
   const result = documents.map((doc) => {
-    const owners = doc.owners ? doc.owners.split('|') : []
     const files = doc.files
       ? doc.files.split('|').map((str) => {
           const [id, file_name, file_path] = str.split('::')
@@ -227,7 +211,6 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
 
     return {
       ...doc,
-      owners,
       files
     }
   })
