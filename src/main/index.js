@@ -1,9 +1,10 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
+import { join } from 'node:path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { getDB } from './db'
 import fs from 'node:fs'
+import { getDocumentFolder } from './utils'
 
 function createWindow() {
   // Create the browser window.
@@ -108,7 +109,7 @@ ipcMain.handle('upload-document', async (event, payload) => {
     payload
 
   // folder to store PDFs
-  const baseDir = join(app.getPath('userData'), 'documents')
+  const baseDir = join(getDocumentFolder(), 'documents')
   if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
 
   // create document record

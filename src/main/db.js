@@ -1,12 +1,12 @@
 import Database from 'better-sqlite3'
-import { app } from 'electron'
-import path from 'path'
+import { join } from 'node:path'
+import { getDocumentFolder } from './utils'
 
 let db
 
 export function getDB() {
   if (!db) {
-    const dbPath = path.join(app.getPath('userData'), 'app.db')
+    const dbPath = join(getDocumentFolder(), 'app.db')
     db = new Database(dbPath)
 
     // Enable foreign keys
