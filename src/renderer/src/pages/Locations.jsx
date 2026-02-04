@@ -1,4 +1,4 @@
-import { MapPin, List, Check } from 'lucide-react'
+import { MapPin, List, Check, Archive } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 export default function Locations() {
@@ -7,6 +7,8 @@ export default function Locations() {
   const [selectedUpazila, setSelectedUpazila] = useState(null)
   const [upazilas, setUpazilas] = useState([])
   const [moujas, setMoujas] = useState([])
+  const [volumeName, setVolumeName] = useState('')
+  const [volumes, setVolumes] = useState([])
 
   const loadUpazilas = async () => {
     const data = await window.api.getUpazilas()
@@ -22,6 +24,11 @@ export default function Locations() {
     setMoujas(data)
   }
 
+  const loadVolumes = async (upazilaId) => {
+    const data = await window.api.getVolumes(upazilaId)
+    setVolumes(data)
+  }
+
   useEffect(() => {
     Promise.resolve().then(() => {
       loadUpazilas()
@@ -32,13 +39,14 @@ export default function Locations() {
     Promise.resolve().then(() => {
       if (selectedUpazila) {
         loadMoujas(selectedUpazila)
+        loadVolumes(selectedUpazila)
       }
     })
   }, [selectedUpazila])
 
   return (
     <div className="bg-gray-100 p-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Manage Locations</h1>
@@ -46,7 +54,7 @@ export default function Locations() {
         </div>
 
         {/* Cards Container */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Add Upazila Card */}
           <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
             {/* Card Header with colored border */}
@@ -114,7 +122,7 @@ export default function Locations() {
           {/* Add Mouja Card */}
           <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
             {/* Card Header with colored border */}
-            <div className="h-1 bg-gradient-to-r from-emerald-600 to-orange-500"></div>
+            <div className="h-1 bg-emerald-700"></div>
 
             <div className="p-6">
               {/* Title */}
@@ -186,6 +194,86 @@ export default function Locations() {
                       className="px-3 py-2 bg-orange-50 text-orange-700 rounded-lg text-sm border border-orange-200"
                     >
                       {m.name}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Add Volume Card */}
+          <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
+            {/* Card Header with colored border */}
+            <div className="h-1 bg-emerald-700"></div>
+
+            <div className="p-6">
+              {/* Title */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <Archive size={18} className="text-gray-700" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">Add Volume</h2>
+              </div>
+
+              <p className="text-sm text-gray-600 mb-6">Add Volumes under a selected Upazila.</p>
+
+              {/* Select Upazila */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Upazila
+                </label>
+                <select
+                  value={selectedUpazila}
+                  onChange={(e) => setSelectedUpazila(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                >
+                  {upazilas.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Volume Name Input */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Volume Name</label>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    placeholder="e.g. Volume A"
+                    value={volumeName}
+                    onChange={(e) => setVolumeName(e.target.value)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                  />
+                  <button
+                    className="px-6 py-2 bg-emerald-700 text-white rounded-lg"
+                    onClick={async () => {
+                      if (volumeName && selectedUpazila) {
+                        await window.api.addVolume(volumeName, selectedUpazila)
+                        setVolumeName('')
+                        loadVolumes(selectedUpazila)
+                      }
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Existing Volumes */}
+              <div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">
+                  Volumes ({volumes.length})
+                </h3>
+
+                <div className="flex flex-wrap gap-2">
+                  {volumes.map((v) => (
+                    <div
+                      key={v.id}
+                      className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm border border-blue-200"
+                    >
+                      {v.name}
                     </div>
                   ))}
                 </div>

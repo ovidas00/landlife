@@ -1,14 +1,14 @@
-import { Search, FileText, ChevronLeft, ChevronRight } from 'lucide-react'
-import { useEffect, useState, useRef } from 'react'
+import { FileText, ChevronLeft, ChevronRight, Download } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import FilesModal from '../components/FilesModal'
+import ReportStats from '../components/ReportStats'
 
-export default function RecordsSearch() {
+export default function ReportsPage() {
   const [upazilas, setUpazilas] = useState([])
   const [moujas, setMoujas] = useState([])
   const [selectedUpazila, setSelectedUpazila] = useState('')
   const [selectedMouja, setSelectedMouja] = useState('')
   const [selectedDocType, setSelectedDocType] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -18,8 +18,6 @@ export default function RecordsSearch() {
   const [page, setPage] = useState(1)
   const [pageSize] = useState(50)
   const [total, setTotal] = useState(0)
-
-  const searchTimeout = useRef(null)
 
   // Load upazilas
   useEffect(() => {
@@ -45,30 +43,16 @@ export default function RecordsSearch() {
     loadMoujas()
   }, [selectedUpazila])
 
-  // Immediate fetch on mount or filter/page change
+  // Fetch documents on filter/page change
   useEffect(() => {
     loadDocuments()
   }, [selectedUpazila, selectedMouja, selectedDocType, page])
-
-  // Debounced fetch only for search input
-  useEffect(() => {
-    // Skip if empty and first render
-    if (!searchQuery) return
-
-    if (searchTimeout.current) clearTimeout(searchTimeout.current)
-    searchTimeout.current = setTimeout(() => {
-      loadDocuments()
-    }, 300)
-
-    return () => clearTimeout(searchTimeout.current)
-  }, [searchQuery])
 
   const loadDocuments = async () => {
     setLoading(true)
     try {
       const filters = { page, pageSize }
       if (selectedDocType) filters.docType = selectedDocType
-      if (searchQuery) filters.searchQuery = searchQuery
       if (selectedUpazila) filters.upazilaId = selectedUpazila
       if (selectedMouja) filters.moujaId = selectedMouja
 
@@ -115,6 +99,10 @@ export default function RecordsSearch() {
 
   const totalPages = Math.ceil(total / pageSize)
 
+  const exportRecords = () => {
+    console.log('Exporting records...', records)
+  }
+
   return (
     <>
       <FilesModal files={currentFiles} isOpen={modalOpen} onClose={() => setModalOpen(false)} />
@@ -122,20 +110,26 @@ export default function RecordsSearch() {
       <div className="bg-gray-100 p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="flex items-start justify-between mb-8">
+          <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">Records Search</h1>
-              <p className="text-gray-600">
-                Filter and find land documents instantly from the secure archive.
-              </p>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">Reports</h1>
+              <p className="text-gray-600">Generate and export land document reports instantly.</p>
             </div>
+            {/* Export Button */}
+            <button
+              onClick={exportRecords}
+              className="inline-flex items-center gap-2 px-6 py-2 border-2 border-gray-300 text-gray-600 bg-white rounded-lg shadow hover:bg-gray-200 transition"
+            >
+              <Download size={16} />
+              Export
+            </button>
           </div>
 
           {/* Filters */}
           <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden mb-6">
             <div className="h-1 bg-gradient-to-r from-emerald-600 to-orange-500"></div>
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Upazila */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -182,38 +176,20 @@ export default function RecordsSearch() {
                   <select
                     value={selectedDocType}
                     onChange={(e) => setSelectedDocType(e.target.value)}
-                    className="w-full px-4 py-2.5 border whitespace-nowrap border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   >
-                    <option value="">All Type</option>
+                    <option value="">All Types</option>
                     <option value="usable">Usable Records</option>
                     <option value="unusable">Unusable Records</option>
                     <option value="moderate">Moderately Usable</option>
                     <option value="not_found">Not Found Records</option>
                   </select>
                 </div>
-
-                {/* Search */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Search Details
-                  </label>
-                  <div className="relative">
-                    <Search
-                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                      size={18}
-                    />
-                    <input
-                      type="search"
-                      placeholder="Khatian, Holding or Dag..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
-                    />
-                  </div>
-                </div>
               </div>
             </div>
           </div>
+
+          <ReportStats />
 
           {/* Results Table */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -233,7 +209,7 @@ export default function RecordsSearch() {
 
               <tbody>
                 {!loading && records.length > 0 ? (
-                  records.map((record, index) => (
+                  records.map((record) => (
                     <tr key={record.id} className="border-b border-gray-200 hover:bg-gray-50">
                       <td className="px-6 py-3 font-semibold">{record.id}</td>
                       <td className="px-6 py-3">
@@ -273,7 +249,6 @@ export default function RecordsSearch() {
                           '—'
                         )}
                       </td>
-                      {/* New Remarks column */}
                       <td className="px-6 py-5">
                         {record.remarks ? (
                           <span className="text-sm">{record.remarks}</span>
@@ -298,7 +273,7 @@ export default function RecordsSearch() {
                 ) : (
                   <tr>
                     <td colSpan={6} className="text-center py-8 text-gray-500">
-                      {loading ? 'Loading documents...' : 'No documents found!'}
+                      {loading ? 'Loading records...' : 'No records found!'}
                     </td>
                   </tr>
                 )}

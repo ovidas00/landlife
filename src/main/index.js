@@ -89,6 +89,18 @@ ipcMain.handle('get-moujas', (event, upazilaId) => {
   return db.prepare('SELECT * FROM moujas WHERE upazila_id = ?').all(upazilaId)
 })
 
+ipcMain.handle('add-volume', (event, name, upazilaId) => {
+  const db = getDB()
+  db.prepare('INSERT INTO volumes (name, upazila_id) VALUES (?, ?)').run(name, upazilaId)
+
+  return { success: true }
+})
+
+ipcMain.handle('get-volumes', async (event, upazilaId) => {
+  const db = getDB()
+  return db.prepare('SELECT * FROM volumes WHERE upazila_id = ?').all(upazilaId)
+})
+
 ipcMain.handle('upload-document', async (event, payload) => {
   const db = getDB()
 

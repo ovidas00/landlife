@@ -7,6 +7,9 @@ contextBridge.exposeInMainWorld('api', {
   addMouja: (name, upazilaId) => ipcRenderer.invoke('add-mouja', name, upazilaId),
   getMoujas: (upazilaId) => ipcRenderer.invoke('get-moujas', upazilaId),
 
+  addVolume: (name, upazilaId) => ipcRenderer.invoke('add-volume', name, upazilaId),
+  getVolumes: (upazilaId) => ipcRenderer.invoke('get-volumes', upazilaId),
+
   uploadDocument: async (data) => {
     const files = await Promise.all(
       data.files.map(async (f) => ({

@@ -111,17 +111,17 @@ export default function Dashboard() {
                 key={index}
                 className={`bg-white rounded-xl border-2 border-gray-200 ${stat.borderColor} border-l-4 shadow-sm overflow-hidden`}
               >
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
+                <div className="p-4">
+                  <div className="flex items-start justify-between mb-2">
                     <h3 className="text-sm font-medium text-gray-600">{stat.label}</h3>
                     <div
                       className={`w-10 h-10 ${stat.bgColor} rounded-lg flex items-center justify-center`}
                     >
-                      <Icon size={20} className={stat.iconColor} />
+                      <Icon size={18} className={stat.iconColor} />
                     </div>
                   </div>
                   <div>
-                    <p className="text-4xl font-bold text-gray-900 mb-1">{stat.value}</p>
+                    <p className="text-3xl font-bold text-gray-900 mb-1">{stat.value}</p>{' '}
                     <p className="text-sm text-gray-500">{stat.subtitle}</p>
                   </div>
                 </div>

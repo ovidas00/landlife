@@ -34,6 +34,18 @@ export function getDB() {
     `
     ).run()
 
+    // Volumes table
+    db.prepare(
+      `
+      CREATE TABLE IF NOT EXISTS volumes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        upazila_id INTEGER NOT NULL,
+        FOREIGN KEY (upazila_id) REFERENCES upazilas(id) ON DELETE CASCADE
+      )
+    `
+    ).run()
+
     // Documents table (updated)
     db.prepare(
       `
