@@ -4,10 +4,10 @@ import FilesModal from '../components/FilesModal'
 
 export default function RecordsSearch() {
   const [upazilas, setUpazilas] = useState([])
-  const [moujas, setMoujas] = useState([])
+  const [mouzas, setMouzas] = useState([])
   const [volumes, setVolumes] = useState([])
   const [selectedUpazila, setSelectedUpazila] = useState('')
-  const [selectedMouja, setSelectedMouja] = useState('')
+  const [selectedMouza, setSelectedMouza] = useState('')
   const [selectedVolume, setSelectedVolume] = useState('')
   const [selectedDocType, setSelectedDocType] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -32,24 +32,24 @@ export default function RecordsSearch() {
     loadUpazilas()
   }, [])
 
-  // Load moujas on upazila change
+  // Load mouzas on upazila change
   useEffect(() => {
     const loadData = async () => {
       if (!selectedUpazila) {
-        setMoujas([])
+        setMouzas([])
         setVolumes([])
-        setSelectedMouja('')
+        setSelectedMouza('')
         return
       }
 
-      const [moujaData, volumeData] = await Promise.all([
-        window.api.getMoujas(selectedUpazila),
+      const [mouzaData, volumeData] = await Promise.all([
+        window.api.getMouzas(selectedUpazila),
         window.api.getVolumes(selectedUpazila)
       ])
 
-      setMoujas(moujaData)
+      setMouzas(mouzaData)
       setVolumes(volumeData)
-      setSelectedMouja('')
+      setSelectedMouza('')
       setSelectedVolume('')
     }
 
@@ -59,7 +59,7 @@ export default function RecordsSearch() {
   // Immediate fetch on mount or filter/page change
   useEffect(() => {
     loadDocuments()
-  }, [selectedUpazila, selectedMouja, selectedVolume, selectedDocType, page])
+  }, [selectedUpazila, selectedMouza, selectedVolume, selectedDocType, page])
 
   // Debounced fetch only for search input
   useEffect(() => {
@@ -85,7 +85,7 @@ export default function RecordsSearch() {
       if (selectedDocType) filters.docType = selectedDocType
       if (searchQuery) filters.searchQuery = searchQuery
       if (selectedUpazila) filters.upazilaId = selectedUpazila
-      if (selectedMouja) filters.moujaId = selectedMouja
+      if (selectedMouza) filters.mouzaId = selectedMouza
       if (selectedVolume) filters.volumeId = selectedVolume
 
       const res = await window.api.getDocuments(filters)
@@ -96,7 +96,7 @@ export default function RecordsSearch() {
         doc_type: doc.doc_type,
         remarks: doc.remarks,
         upazila: doc.upazilaName,
-        mouja: doc.moujaName,
+        mouza: doc.mouzaName,
         volume: doc.volumeName,
         khatian: doc.khatian_no,
         dag: doc.dag_no,
@@ -151,7 +151,7 @@ export default function RecordsSearch() {
           <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden mb-6">
             <div className="h-1 bg-emerald-700"></div>
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 {/* Upazila */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -171,18 +171,18 @@ export default function RecordsSearch() {
                   </select>
                 </div>
 
-                {/* Mouja */}
+                {/* Mouza */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Mouza (মৌজা)
                   </label>
                   <select
-                    value={selectedMouja}
-                    onChange={(e) => setSelectedMouja(e.target.value)}
+                    value={selectedMouza}
+                    onChange={(e) => setSelectedMouza(e.target.value)}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   >
                     <option value="">All Mouzas</option>
-                    {moujas.map((m) => (
+                    {mouzas.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.name}
                       </option>
@@ -255,7 +255,7 @@ export default function RecordsSearch() {
             <table className="w-full border-collapse">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left px-6 py-4 text-sm font-semibold">Serial</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold">SL</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold">Upazila / Mouza</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold">
                     Khatian / Holding / Dag
@@ -275,30 +275,37 @@ export default function RecordsSearch() {
                       <td className="px-6 py-3 font-semibold">{record.id}</td>
                       <td className="px-6 py-3">
                         <p className="font-semibold">{record.upazila}</p>
-                        <p className="text-sm text-gray-600">{record.mouja}</p>
+                        <p className="text-sm text-gray-600">{record.mouza}</p>
                       </td>
                       <td className="px-6 py-3">
                         <div className="flex gap-1 flex-wrap items-center">
-                          {record.khatian && (
-                            <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
-                              <span className="font-medium text-gray-600">K:</span>
-                              {record.khatian}
-                            </div>
-                          )}
-                          {record.holding && (
-                            <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
-                              <span className="font-medium text-gray-600">H:</span>
-                              {record.holding}
-                            </div>
-                          )}
-                          {record.dag && (
-                            <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
-                              <span className="font-medium text-gray-600">D:</span>
-                              {record.dag}
-                            </div>
+                          {record.khatian || record.holding || record.dag ? (
+                            <>
+                              {record.khatian && (
+                                <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
+                                  <span className="font-medium text-gray-600">K:</span>
+                                  {record.khatian}
+                                </div>
+                              )}
+                              {record.holding && (
+                                <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
+                                  <span className="font-medium text-gray-600">H:</span>
+                                  {record.holding}
+                                </div>
+                              )}
+                              {record.dag && (
+                                <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
+                                  <span className="font-medium text-gray-600">D:</span>
+                                  {record.dag}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-gray-400 text-sm">N/A</span>
                           )}
                         </div>
                       </td>
+
                       <td className="px-6 py-3">
                         <span className="text-sm">{record.volume || 'N/A'}</span>
                       </td>

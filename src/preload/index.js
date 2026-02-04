@@ -4,8 +4,8 @@ contextBridge.exposeInMainWorld('api', {
   addUpazila: (name) => ipcRenderer.invoke('add-upazilla', name),
   getUpazilas: () => ipcRenderer.invoke('get-upazilas'),
 
-  addMouja: (name, upazilaId) => ipcRenderer.invoke('add-mouja', name, upazilaId),
-  getMoujas: (upazilaId) => ipcRenderer.invoke('get-moujas', upazilaId),
+  addMouza: (name, upazilaId) => ipcRenderer.invoke('add-mouza', name, upazilaId),
+  getMouzas: (upazilaId) => ipcRenderer.invoke('get-mouzas', upazilaId),
 
   addVolume: (name, upazilaId) => ipcRenderer.invoke('add-volume', name, upazilaId),
   getVolumes: (upazilaId) => ipcRenderer.invoke('get-volumes', upazilaId),

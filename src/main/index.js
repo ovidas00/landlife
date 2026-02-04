@@ -77,16 +77,16 @@ ipcMain.handle('get-upazilas', async () => {
   return rows
 })
 
-ipcMain.handle('add-mouja', (event, name, upazilaId) => {
+ipcMain.handle('add-mouza', (event, name, upazilaId) => {
   const db = getDB()
-  db.prepare('INSERT INTO moujas (name, upazila_id) VALUES (?, ?)').run(name, upazilaId)
+  db.prepare('INSERT INTO mouzas (name, upazila_id) VALUES (?, ?)').run(name, upazilaId)
 
   return { success: true }
 })
 
-ipcMain.handle('get-moujas', (event, upazilaId) => {
+ipcMain.handle('get-mouzas', (event, upazilaId) => {
   const db = getDB()
-  return db.prepare('SELECT * FROM moujas WHERE upazila_id = ?').all(upazilaId)
+  return db.prepare('SELECT * FROM mouzas WHERE upazila_id = ?').all(upazilaId)
 })
 
 ipcMain.handle('add-volume', (event, name, upazilaId) => {
@@ -104,7 +104,7 @@ ipcMain.handle('get-volumes', async (event, upazilaId) => {
 ipcMain.handle('upload-document', async (event, payload) => {
   const db = getDB()
 
-  const { upazilaId, moujaId, volumeId, khatianNo, dagNo, holdingNo, docType, remarks, files } =
+  const { upazilaId, mouzaId, volumeId, khatianNo, dagNo, holdingNo, docType, remarks, files } =
     payload
 
   // folder to store PDFs
@@ -116,11 +116,11 @@ ipcMain.handle('upload-document', async (event, payload) => {
     .prepare(
       `
       INSERT INTO documents
-      (upazila_id, mouja_id, volume_id, khatian_no, dag_no, holding_no, doc_type, remarks)
+      (upazila_id, mouza_id, volume_id, khatian_no, dag_no, holding_no, doc_type, remarks)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `
     )
-    .run(upazilaId, moujaId, volumeId, khatianNo, dagNo, holdingNo, docType, remarks)
+    .run(upazilaId, mouzaId, volumeId, khatianNo, dagNo, holdingNo, docType, remarks)
 
   const documentId = result.lastInsertRowid
 
@@ -145,7 +145,7 @@ ipcMain.handle('upload-document', async (event, payload) => {
 ipcMain.handle('get-documents', async (event, filters = {}) => {
   const db = getDB()
 
-  const { upazilaId, moujaId, volumeId, docType, searchQuery, page = 1, pageSize = 50 } = filters
+  const { upazilaId, mouzaId, volumeId, docType, searchQuery, page = 1, pageSize = 50 } = filters
 
   const offset = (page - 1) * pageSize
 
@@ -158,10 +158,10 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
     params.push(upazilaId)
   }
 
-  // Mouja filter
-  if (moujaId) {
-    conditions.push('d.mouja_id = ?')
-    params.push(moujaId)
+  // Mouza filter
+  if (mouzaId) {
+    conditions.push('d.mouza_id = ?')
+    params.push(mouzaId)
   }
 
   // Volume filter
@@ -198,7 +198,7 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
     SELECT 
       d.id,
       d.upazila_id,
-      d.mouja_id,
+      d.mouza_id,
       d.volume_id,
       d.khatian_no,
       d.dag_no,
@@ -207,12 +207,12 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
       d.remarks,
       d.created_at,
       u.name AS upazilaName,
-      m.name AS moujaName,
+      m.name AS mouzaName,
       v.name AS volumeName,
       COALESCE(f.files, '') AS files
     FROM documents d
     LEFT JOIN upazilas u ON d.upazila_id = u.id
-    LEFT JOIN moujas m ON d.mouja_id = m.id
+    LEFT JOIN mouzas m ON d.mouza_id = m.id
     LEFT JOIN volumes v ON d.volume_id = v.id
     LEFT JOIN (
       SELECT document_id,
@@ -302,7 +302,7 @@ ipcMain.handle('get-dashboard-state', async () => {
 ipcMain.handle('get-report-state', async (event, filters = {}) => {
   const db = getDB()
 
-  const { upazilaId, moujaId, volumeId, docType } = filters
+  const { upazilaId, mouzaId, volumeId, docType } = filters
 
   // Build WHERE conditions dynamically
   const conditions = []
@@ -312,9 +312,9 @@ ipcMain.handle('get-report-state', async (event, filters = {}) => {
     conditions.push('d.upazila_id = @upazilaId')
     params.upazilaId = upazilaId
   }
-  if (moujaId) {
-    conditions.push('d.mouja_id = @moujaId')
-    params.moujaId = moujaId
+  if (mouzaId) {
+    conditions.push('d.mouza_id = @mouzaId')
+    params.mouzaId = mouzaId
   }
   if (volumeId) {
     conditions.push('d.volume_id = @volumeId')

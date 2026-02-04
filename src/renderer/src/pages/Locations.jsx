@@ -3,11 +3,11 @@ import { useEffect, useState } from 'react'
 
 export default function Locations() {
   const [upazila, setUpazila] = useState('')
-  const [moujaName, setMoujaName] = useState('')
+  const [mouzaName, setMouzaName] = useState('')
   const [selectedUpazila, setSelectedUpazila] = useState(null)
   const [selectedUpazilaVolume, setSelectedUpazilaVolume] = useState(null)
   const [upazilas, setUpazilas] = useState([])
-  const [moujas, setMoujas] = useState([])
+  const [mouzas, setMouzas] = useState([])
   const [volumeName, setVolumeName] = useState('')
   const [volumes, setVolumes] = useState([])
 
@@ -21,9 +21,9 @@ export default function Locations() {
     }
   }
 
-  const loadMoujas = async (upazilaId) => {
-    const data = await window.api.getMoujas(upazilaId)
-    setMoujas(data)
+  const loadMouzas = async (upazilaId) => {
+    const data = await window.api.getMouzas(upazilaId)
+    setMouzas(data)
   }
 
   const loadVolumes = async (upazilaId) => {
@@ -40,7 +40,7 @@ export default function Locations() {
   useEffect(() => {
     Promise.resolve().then(() => {
       if (selectedUpazila) {
-        loadMoujas(selectedUpazila)
+        loadMouzas(selectedUpazila)
       }
     })
   }, [selectedUpazila])
@@ -128,7 +128,7 @@ export default function Locations() {
             </div>
           </div>
 
-          {/* Add Mouja Card */}
+          {/* Add Mouza Card */}
           <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
             {/* Card Header with colored border */}
             <div className="h-1 bg-emerald-700"></div>
@@ -164,24 +164,24 @@ export default function Locations() {
                 </select>
               </div>
 
-              {/* Mouja Name Input */}
+              {/* Mouza Name Input */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Mouja Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Mouza Name</label>
                 <div className="flex gap-3">
                   <input
                     type="text"
                     placeholder="e.g. Ward 01"
-                    value={moujaName}
-                    onChange={(e) => setMoujaName(e.target.value)}
+                    value={mouzaName}
+                    onChange={(e) => setMouzaName(e.target.value)}
                     className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   />
                   <button
                     className="px-6 py-2 bg-emerald-700 text-white rounded-lg"
                     onClick={async () => {
-                      if (moujaName && selectedUpazila) {
-                        await window.api.addMouja(moujaName, selectedUpazila)
-                        setMoujaName('')
-                        loadMoujas(selectedUpazila)
+                      if (mouzaName && selectedUpazila) {
+                        await window.api.addMouza(mouzaName, selectedUpazila)
+                        setMouzaName('')
+                        loadMouzas(selectedUpazila)
                       }
                     }}
                   >
@@ -190,14 +190,14 @@ export default function Locations() {
                 </div>
               </div>
 
-              {/* Moujas in Dhamrai */}
+              {/* Mouzas in Dhamrai */}
               <div>
                 <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">
-                  Mouzas ({moujas.length})
+                  Mouzas ({mouzas.length})
                 </h3>
 
                 <div className="flex flex-wrap gap-2">
-                  {moujas.map((m) => (
+                  {mouzas.map((m) => (
                     <div
                       key={m.id}
                       className="px-3 py-2 bg-orange-50 text-orange-700 rounded-lg text-sm border border-orange-200"
@@ -259,9 +259,9 @@ export default function Locations() {
                     className="px-6 py-2 bg-emerald-700 text-white rounded-lg"
                     onClick={async () => {
                       if (volumeName && selectedUpazila) {
-                        await window.api.addVolume(volumeName, selectedUpazila)
+                        await window.api.addVolume(volumeName, selectedUpazilaVolume)
                         setVolumeName('')
-                        loadVolumes(selectedUpazila)
+                        loadVolumes(selectedUpazilaVolume)
                       }
                     }}
                   >

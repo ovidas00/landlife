@@ -3,10 +3,10 @@ import { useState, useEffect, useRef } from 'react'
 
 export default function UploadDocument() {
   const [upazilas, setUpazilas] = useState([])
-  const [moujas, setMoujas] = useState([])
+  const [mouzas, setMouzas] = useState([])
   const [volumes, setVolumes] = useState([])
   const [selectedUpazila, setSelectedUpazila] = useState('')
-  const [mouja, setMouja] = useState('')
+  const [mouza, setMouza] = useState('')
   const [volume, setVolume] = useState('')
   const [khatianNo, setKhatianNo] = useState('')
   const [dagNo, setDagNo] = useState('')
@@ -24,9 +24,9 @@ export default function UploadDocument() {
     setUpazilas(data)
   }
 
-  const loadMoujas = async (upazilaId) => {
-    const data = await window.api.getMoujas(upazilaId)
-    setMoujas(data)
+  const loadMouzas = async (upazilaId) => {
+    const data = await window.api.getMouzas(upazilaId)
+    setMouzas(data)
   }
 
   const loadVolumes = async (upazilaId) => {
@@ -43,9 +43,9 @@ export default function UploadDocument() {
   useEffect(() => {
     Promise.resolve().then(() => {
       if (selectedUpazila) {
-        loadMoujas(selectedUpazila)
+        loadMouzas(selectedUpazila)
         loadVolumes(selectedUpazila)
-        setMouja('')
+        setMouza('')
         setVolume('')
       }
     })
@@ -70,7 +70,7 @@ export default function UploadDocument() {
   }
 
   const submitDocument = async () => {
-    if (!selectedUpazila || !mouja || !volume) {
+    if (!selectedUpazila || !mouza || !volume) {
       alert('Please select location')
       return
     }
@@ -84,7 +84,7 @@ export default function UploadDocument() {
 
     const payload = {
       upazilaId: selectedUpazila,
-      moujaId: mouja,
+      mouzaId: mouza,
       volumeId: volume,
       khatianNo,
       dagNo,
@@ -149,12 +149,12 @@ export default function UploadDocument() {
                 <div>
                   <label className="block mb-2 font-medium">Mouza *</label>
                   <select
-                    value={mouja}
-                    onChange={(e) => setMouja(e.target.value)}
+                    value={mouza}
+                    onChange={(e) => setMouza(e.target.value)}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
                   >
-                    <option value="">Select Mouja</option>
-                    {moujas.map((m) => (
+                    <option value="">Select Mouza</option>
+                    {mouzas.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.name}
                       </option>

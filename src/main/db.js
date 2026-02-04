@@ -22,10 +22,10 @@ export function getDB() {
     `
     ).run()
 
-    // Moujas table
+    // Mouzas table
     db.prepare(
       `
-      CREATE TABLE IF NOT EXISTS moujas (
+      CREATE TABLE IF NOT EXISTS mouzas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         upazila_id INTEGER NOT NULL,
@@ -46,13 +46,13 @@ export function getDB() {
     `
     ).run()
 
-    // Documents table (updated)
+    // Documents table
     db.prepare(
       `
       CREATE TABLE IF NOT EXISTS documents (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         upazila_id INTEGER NOT NULL,
-        mouja_id INTEGER NOT NULL,
+        mouza_id INTEGER NOT NULL,
         volume_id INTEGER NOT NULL,
         khatian_no TEXT,
         dag_no TEXT,
@@ -60,9 +60,10 @@ export function getDB() {
         doc_type TEXT,
         remarks TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (upazila_id) REFERENCES upazilas(id) ON DELETE CASCADE,
-        FOREIGN KEY (mouja_id) REFERENCES moujas(id) ON DELETE CASCADE,
-        FOREIGN KEY (volume_id) REFERENCES volumes(id) ON DELETE CASCADE
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (upazila_id) REFERENCES upazilas(id) ON DELETE RESTRICT,
+        FOREIGN KEY (mouza_id) REFERENCES mouzas(id) ON DELETE RESTRICT,
+        FOREIGN KEY (volume_id) REFERENCES volumes(id) ON DELETE RESTRICT
       )
     `
     ).run()
