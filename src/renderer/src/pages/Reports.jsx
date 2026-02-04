@@ -245,7 +245,7 @@ export default function ReportsPage() {
                   {/* New column */}
                   <th className="text-left px-6 py-4 text-sm font-semibold">Record Type</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold">Remarks</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold">Files</th>
+                  <th className="text-right px-6 py-4 text-sm font-semibold">Files</th>
                 </tr>
               </thead>
 
@@ -293,7 +293,7 @@ export default function ReportsPage() {
                       <td className="px-6 py-5">
                         {record.doc_type ? (
                           <span
-                            className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${docTypeColors[record.doc_type]}`}
+                            className={`inline-block px-2 py-1 rounded text-sm font-medium ${docTypeColors[record.doc_type]}`}
                           >
                             {docTypeLabels[record.doc_type]}
                           </span>
@@ -309,16 +309,18 @@ export default function ReportsPage() {
                         )}
                       </td>
                       <td className="px-6 py-3">
-                        <button
-                          className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm whitespace-nowrap"
-                          onClick={() => {
-                            setCurrentFiles(record.files)
-                            setModalOpen(true)
-                          }}
-                        >
-                          <FileText size={16} />
-                          Files ({record.fileCount})
-                        </button>
+                        <div className="flex items-center justify-end">
+                          <button
+                            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm whitespace-nowrap"
+                            onClick={() => {
+                              setCurrentFiles(record.files)
+                              setModalOpen(true)
+                            }}
+                          >
+                            <FileText size={16} />
+                            Files ({record.fileCount})
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

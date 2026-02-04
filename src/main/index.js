@@ -207,6 +207,7 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
       d.doc_type,
       d.remarks,
       d.created_at,
+      d.updated_at,
       u.name AS upazilaName,
       m.name AS mouzaName,
       v.name AS volumeName,

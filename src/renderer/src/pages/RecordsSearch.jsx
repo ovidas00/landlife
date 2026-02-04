@@ -1,6 +1,7 @@
-import { Search, FileText, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, FileText, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 import FilesModal from '../components/FilesModal'
+import RecordInfoModal from '../components/InfoModal'
 
 export default function RecordsSearch() {
   const [upazilas, setUpazilas] = useState([])
@@ -14,6 +15,8 @@ export default function RecordsSearch() {
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
+  const [infoModalOpen, setInfoModalOpen] = useState(false)
+  const [selectedRecord, setSelectedRecord] = useState(null)
   const [currentFiles, setCurrentFiles] = useState([])
 
   // Pagination state
@@ -102,7 +105,9 @@ export default function RecordsSearch() {
         dag: doc.dag_no,
         holding: doc.holding_no,
         fileCount: doc.files?.length || 0,
-        files: doc.files
+        files: doc.files,
+        created_at: doc.created_at,
+        updated_at: doc.updated_at
       }))
 
       setRecords(formatted)
@@ -134,6 +139,12 @@ export default function RecordsSearch() {
   return (
     <>
       <FilesModal files={currentFiles} isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+
+      <RecordInfoModal
+        record={selectedRecord}
+        isOpen={infoModalOpen}
+        onClose={() => setInfoModalOpen(false)}
+      />
 
       <div className="bg-gray-100 p-8">
         <div className="max-w-7xl mx-auto">
@@ -264,7 +275,7 @@ export default function RecordsSearch() {
                   {/* New column */}
                   <th className="text-left px-6 py-4 text-sm font-semibold">Record Type</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold">Remarks</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold">Files</th>
+                  <th className="text-right px-6 py-4 text-sm font-semibold">Files & Action</th>
                 </tr>
               </thead>
 
@@ -312,7 +323,7 @@ export default function RecordsSearch() {
                       <td className="px-6 py-5">
                         {record.doc_type ? (
                           <span
-                            className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${docTypeColors[record.doc_type]}`}
+                            className={`inline-block px-2 py-1 rounded text-sm font-medium ${docTypeColors[record.doc_type]}`}
                           >
                             {docTypeLabels[record.doc_type]}
                           </span>
@@ -327,17 +338,30 @@ export default function RecordsSearch() {
                           <span className="text-sm text-gray-400">N/A</span>
                         )}
                       </td>
-                      <td className="px-6 py-3">
-                        <button
-                          className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm whitespace-nowrap"
-                          onClick={() => {
-                            setCurrentFiles(record.files)
-                            setModalOpen(true)
-                          }}
-                        >
-                          <FileText size={16} />
-                          Files ({record.fileCount})
-                        </button>
+                      <td className="px-6 py-3 gap-2">
+                        {/* Files button */}
+                        <div className="flex gap-2 items-center justify-end">
+                          <button
+                            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm whitespace-nowrap"
+                            onClick={() => {
+                              setCurrentFiles(record.files)
+                              setModalOpen(true)
+                            }}
+                          >
+                            <FileText size={16} />
+                            Files ({record.fileCount})
+                          </button>
+                          {/* Info icon button */}
+                          <button
+                            className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+                            onClick={() => {
+                              setSelectedRecord(record)
+                              setInfoModalOpen(true)
+                            }}
+                          >
+                            <Info size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
