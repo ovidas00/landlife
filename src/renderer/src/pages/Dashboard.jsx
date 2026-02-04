@@ -109,21 +109,22 @@ export default function Dashboard() {
             return (
               <div
                 key={index}
-                className={`bg-white rounded-xl border-2 border-gray-200 ${stat.borderColor} border-l-4 shadow-sm overflow-hidden`}
+                className={`bg-white rounded-lg border border-gray-200 ${stat.borderColor} border-l-4 shadow-sm`}
               >
-                <div className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-sm font-medium text-gray-600">{stat.label}</h3>
+                <div className="p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-xs font-medium text-gray-600">{stat.label}</h3>
+
                     <div
-                      className={`w-10 h-10 ${stat.bgColor} rounded-lg flex items-center justify-center`}
+                      className={`w-7 h-7 ${stat.bgColor} rounded-md flex items-center justify-center`}
                     >
-                      <Icon size={18} className={stat.iconColor} />
+                      <Icon size={14} className={stat.iconColor} />
                     </div>
                   </div>
-                  <div>
-                    <p className="text-3xl font-bold text-gray-900 mb-1">{stat.value}</p>{' '}
-                    <p className="text-sm text-gray-500">{stat.subtitle}</p>
-                  </div>
+
+                  <p className="text-xl font-bold text-gray-900 leading-tight">{stat.value}</p>
+
+                  <p className="text-xs text-gray-500 mt-0.5">{stat.subtitle}</p>
                 </div>
               </div>
             )
@@ -144,7 +145,7 @@ export default function Dashboard() {
 
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
-                    <h3 className="text-xl font-bold text-gray-900">{region.name}</h3>
+                    <h3 className="text-lg font-bold text-gray-900">{region.name}</h3>
                     <span className="inline-flex items-center justify-center w-8 h-8 bg-gray-100 text-gray-700 rounded-full text-sm font-semibold">
                       {region.count}
                     </span>

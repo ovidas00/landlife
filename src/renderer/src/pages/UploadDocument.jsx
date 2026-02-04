@@ -142,7 +142,7 @@ export default function UploadDocument() {
                 </div>
 
                 <div>
-                  <label className="block mb-2 font-medium">Mouja *</label>
+                  <label className="block mb-2 font-medium">Mouza *</label>
                   <select
                     value={mouja}
                     onChange={(e) => setMouja(e.target.value)}
@@ -190,7 +190,7 @@ export default function UploadDocument() {
                   </div>
 
                   <div>
-                    <label className="block mb-2 font-medium">Dag No *</label>
+                    <label className="block mb-2 font-medium">Dag No</label>
                     <input
                       type="text"
                       placeholder="Enter Dag"

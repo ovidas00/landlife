@@ -82,7 +82,7 @@ export default function Locations() {
                     placeholder="e.g. Gazipur"
                     value={upazila}
                     onChange={(e) => setUpazila(e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                    className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   />
                   <button
                     className="px-6 py-2 bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800 transition-colors"
@@ -164,7 +164,7 @@ export default function Locations() {
                     placeholder="e.g. Ward 01"
                     value={moujaName}
                     onChange={(e) => setMoujaName(e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                    className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   />
                   <button
                     className="px-6 py-2 bg-emerald-700 text-white rounded-lg"
@@ -244,7 +244,7 @@ export default function Locations() {
                     placeholder="e.g. Volume A"
                     value={volumeName}
                     onChange={(e) => setVolumeName(e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                    className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   />
                   <button
                     className="px-6 py-2 bg-emerald-700 text-white rounded-lg"
