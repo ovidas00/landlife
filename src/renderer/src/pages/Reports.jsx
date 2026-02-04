@@ -241,7 +241,7 @@ export default function ReportsPage() {
                   <th className="text-left px-6 py-4 text-sm font-semibold">
                     Khatian / Holding / Dag
                   </th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold">Volume</th>{' '}
+                  <th className="text-left px-6 py-4 text-sm font-semibold">Volume</th>
                   {/* New column */}
                   <th className="text-left px-6 py-4 text-sm font-semibold">Record Type</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold">Remarks</th>
