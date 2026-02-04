@@ -10,6 +10,7 @@ export default function UploadDocument() {
   const [dagNo, setDagNo] = useState('')
   const [holdingNo, setHoldingNo] = useState('')
   const [docType, setDocType] = useState('usable')
+  const [remarks, setRemarks] = useState('')
   const [files, setFiles] = useState([])
   const [loading, setLoading] = useState(false)
 
@@ -84,6 +85,7 @@ export default function UploadDocument() {
       dagNo,
       holdingNo,
       docType,
+      remarks,
       files
     }
 
@@ -96,6 +98,7 @@ export default function UploadDocument() {
       setDagNo('')
       setHoldingNo('')
       setDocType('')
+      setRemarks('')
       setFiles([])
     } catch (err) {
       console.error(err)
@@ -122,32 +125,38 @@ export default function UploadDocument() {
               <div className="p-6 space-y-4">
                 <h2 className="text-xl font-bold text-emerald-800">Location Details</h2>
 
-                <select
-                  value={selectedUpazila}
-                  onChange={(e) => setSelectedUpazila(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                >
-                  <option value="">Select Upazila</option>
-                  {upazilas.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <label className="block mb-2 font-medium">Upazila *</label>
+                  <select
+                    value={selectedUpazila}
+                    onChange={(e) => setSelectedUpazila(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  >
+                    <option value="">Select Upazila</option>
+                    {upazilas.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-                <select
-                  value={mouja}
-                  onChange={(e) => setMouja(e.target.value)}
-                  disabled={!selectedUpazila}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                >
-                  <option value="">Select Mouja</option>
-                  {moujas.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <label className="block mb-2 font-medium">Mouja *</label>
+                  <select
+                    value={mouja}
+                    onChange={(e) => setMouja(e.target.value)}
+                    disabled={!selectedUpazila}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  >
+                    <option value="">Select Mouja</option>
+                    {moujas.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -157,31 +166,43 @@ export default function UploadDocument() {
               <div className="p-6 space-y-4">
                 <h2 className="text-xl font-bold text-emerald-800">Land Records</h2>
 
-                <div className="grid grid-cols-3 gap-4">
-                  <input
-                    placeholder="Khatian No"
-                    value={khatianNo}
-                    onChange={(e) => setKhatianNo(e.target.value)}
-                    className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block mb-2 font-medium">Khatian No</label>
+                    <input
+                      type="text"
+                      placeholder="Enter Khatian"
+                      value={khatianNo}
+                      onChange={(e) => setKhatianNo(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    />
+                  </div>
 
-                  <input
-                    placeholder="Holding No"
-                    value={holdingNo}
-                    onChange={(e) => setHoldingNo(e.target.value)}
-                    className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                  />
+                  <div>
+                    <label className="block mb-2 font-medium">Holding No</label>
+                    <input
+                      type="text"
+                      placeholder="Enter Holding"
+                      value={holdingNo}
+                      onChange={(e) => setHoldingNo(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    />
+                  </div>
 
-                  <input
-                    placeholder="Dag No"
-                    value={dagNo}
-                    onChange={(e) => setDagNo(e.target.value)}
-                    className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                  />
+                  <div>
+                    <label className="block mb-2 font-medium">Dag No *</label>
+                    <input
+                      type="text"
+                      placeholder="Enter Dag"
+                      value={dagNo}
+                      onChange={(e) => setDagNo(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    />
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block mb-2">Document Type</label>
+                  <label className="block mb-2 font-medium">Document Type *</label>
                   <select
                     value={docType}
                     onChange={(e) => setDocType(e.target.value)}
@@ -192,6 +213,17 @@ export default function UploadDocument() {
                     <option value="moderate">Moderately Usable</option>
                     <option value="not_found">Not Found Records</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="block mb-2 font-medium">Remarks</label>
+                  <input
+                    type="text"
+                    placeholder="Enter Extra Info"
+                    value={remarks}
+                    onChange={(e) => setRemarks(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  />
                 </div>
               </div>
             </div>

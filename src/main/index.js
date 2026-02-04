@@ -92,7 +92,7 @@ ipcMain.handle('get-moujas', (event, upazilaId) => {
 ipcMain.handle('upload-document', async (event, payload) => {
   const db = getDB()
 
-  const { upazilaId, moujaId, khatianNo, dagNo, holdingNo, docType, files } = payload
+  const { upazilaId, moujaId, khatianNo, dagNo, holdingNo, docType, remarks, files } = payload
 
   // folder to store PDFs
   const baseDir = join(app.getPath('userData'), 'documents')
@@ -103,11 +103,11 @@ ipcMain.handle('upload-document', async (event, payload) => {
     .prepare(
       `
       INSERT INTO documents
-      (upazila_id, mouja_id, khatian_no, dag_no, holding_no, doc_type)
-      VALUES (?, ?, ?, ?, ?, ?)
+      (upazila_id, mouja_id, khatian_no, dag_no, holding_no, doc_type, remarks)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `
     )
-    .run(upazilaId, moujaId, khatianNo, dagNo, holdingNo, docType)
+    .run(upazilaId, moujaId, khatianNo, dagNo, holdingNo, docType, remarks)
 
   const documentId = result.lastInsertRowid
 
@@ -184,6 +184,7 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
         d.dag_no,
         d.holding_no,
         d.doc_type,
+        d.remarks,
         d.created_at,
         u.name AS upazilaName,
         m.name AS moujaName,
@@ -268,10 +269,10 @@ ipcMain.handle('get-dashboard-state', async () => {
   return {
     totalUpazilas,
     totalDocuments,
-    usableRecords: docTypeCounts.usable,
-    unusableRecords: docTypeCounts.unusable,
-    moderateRecords: docTypeCounts.moderate,
-    notFoundRecords: docTypeCounts.not_found,
+    usableRecords: docTypeCounts.usable ?? 0,
+    unusableRecords: docTypeCounts.unusable ?? 0,
+    moderateRecords: docTypeCounts.moderate ?? 0,
+    notFoundRecords: docTypeCounts.not_found ?? 0,
     docsByUpazila
   }
 })

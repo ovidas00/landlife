@@ -45,6 +45,7 @@ export function getDB() {
         dag_no TEXT,
         holding_no TEXT,
         doc_type TEXT,
+        remarks TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (upazila_id) REFERENCES upazilas(id) ON DELETE CASCADE,
         FOREIGN KEY (mouja_id) REFERENCES moujas(id) ON DELETE CASCADE
