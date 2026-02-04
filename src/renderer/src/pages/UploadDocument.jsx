@@ -70,7 +70,7 @@ export default function UploadDocument() {
   }
 
   const submitDocument = async () => {
-    if (!selectedUpazila || !mouja) {
+    if (!selectedUpazila || !mouja || !volume) {
       alert('Please select location')
       return
     }
