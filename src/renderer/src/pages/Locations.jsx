@@ -5,6 +5,7 @@ export default function Locations() {
   const [upazila, setUpazila] = useState('')
   const [moujaName, setMoujaName] = useState('')
   const [selectedUpazila, setSelectedUpazila] = useState(null)
+  const [selectedUpazilaVolume, setSelectedUpazilaVolume] = useState(null)
   const [upazilas, setUpazilas] = useState([])
   const [moujas, setMoujas] = useState([])
   const [volumeName, setVolumeName] = useState('')
@@ -16,6 +17,7 @@ export default function Locations() {
 
     if (data.length > 0) {
       setSelectedUpazila(data[0].id)
+      setSelectedUpazilaVolume(data[0].id)
     }
   }
 
@@ -39,10 +41,17 @@ export default function Locations() {
     Promise.resolve().then(() => {
       if (selectedUpazila) {
         loadMoujas(selectedUpazila)
-        loadVolumes(selectedUpazila)
       }
     })
   }, [selectedUpazila])
+
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      if (selectedUpazilaVolume) {
+        loadVolumes(selectedUpazilaVolume)
+      }
+    })
+  }, [selectedUpazilaVolume])
 
   return (
     <div className="bg-gray-100 p-8">
@@ -130,11 +139,11 @@ export default function Locations() {
                 <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
                   <List size={18} className="text-gray-700" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-900">Add Mouja</h2>
+                <h2 className="text-xl font-bold text-gray-900">Add Mouza</h2>
               </div>
 
               <p className="text-sm text-gray-600 mb-6">
-                Add specific Moujas within a selected Upazila.
+                Add specific Mouzas within a selected Upazila.
               </p>
 
               {/* Select Parent Upazila */}
@@ -145,7 +154,7 @@ export default function Locations() {
                 <select
                   value={selectedUpazila}
                   onChange={(e) => setSelectedUpazila(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
                 >
                   {upazilas.map((u) => (
                     <option key={u.id} value={u.id}>
@@ -184,7 +193,7 @@ export default function Locations() {
               {/* Moujas in Dhamrai */}
               <div>
                 <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">
-                  Moujas ({moujas.length})
+                  Mouzas ({moujas.length})
                 </h3>
 
                 <div className="flex flex-wrap gap-2">
@@ -223,9 +232,9 @@ export default function Locations() {
                   Select Upazila
                 </label>
                 <select
-                  value={selectedUpazila}
-                  onChange={(e) => setSelectedUpazila(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  value={selectedUpazilaVolume}
+                  onChange={(e) => setSelectedUpazilaVolume(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
                 >
                   {upazilas.map((u) => (
                     <option key={u.id} value={u.id}>

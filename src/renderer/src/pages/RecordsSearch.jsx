@@ -5,8 +5,10 @@ import FilesModal from '../components/FilesModal'
 export default function RecordsSearch() {
   const [upazilas, setUpazilas] = useState([])
   const [moujas, setMoujas] = useState([])
+  const [volumes, setVolumes] = useState([])
   const [selectedUpazila, setSelectedUpazila] = useState('')
   const [selectedMouja, setSelectedMouja] = useState('')
+  const [selectedVolume, setSelectedVolume] = useState('')
   const [selectedDocType, setSelectedDocType] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [records, setRecords] = useState([])
@@ -32,31 +34,44 @@ export default function RecordsSearch() {
 
   // Load moujas on upazila change
   useEffect(() => {
-    const loadMoujas = async () => {
+    const loadData = async () => {
       if (!selectedUpazila) {
         setMoujas([])
+        setVolumes([])
         setSelectedMouja('')
         return
       }
-      const data = await window.api.getMoujas(selectedUpazila)
-      setMoujas(data)
+
+      const [moujaData, volumeData] = await Promise.all([
+        window.api.getMoujas(selectedUpazila),
+        window.api.getVolumes(selectedUpazila)
+      ])
+
+      setMoujas(moujaData)
+      setVolumes(volumeData)
       setSelectedMouja('')
+      setSelectedVolume('')
     }
-    loadMoujas()
+
+    loadData()
   }, [selectedUpazila])
 
   // Immediate fetch on mount or filter/page change
   useEffect(() => {
     loadDocuments()
-  }, [selectedUpazila, selectedMouja, selectedDocType, page])
+  }, [selectedUpazila, selectedMouja, selectedVolume, selectedDocType, page])
 
   // Debounced fetch only for search input
   useEffect(() => {
-    // Skip if empty and first render
-    if (!searchQuery) return
-
     if (searchTimeout.current) clearTimeout(searchTimeout.current)
+
+    if (!searchQuery) {
+      loadDocuments()
+      return
+    }
+
     searchTimeout.current = setTimeout(() => {
+      setPage(1)
       loadDocuments()
     }, 300)
 
@@ -71,6 +86,7 @@ export default function RecordsSearch() {
       if (searchQuery) filters.searchQuery = searchQuery
       if (selectedUpazila) filters.upazilaId = selectedUpazila
       if (selectedMouja) filters.moujaId = selectedMouja
+      if (selectedVolume) filters.volumeId = selectedVolume
 
       const res = await window.api.getDocuments(filters)
       const docs = res?.data ?? res
@@ -81,10 +97,10 @@ export default function RecordsSearch() {
         remarks: doc.remarks,
         upazila: doc.upazilaName,
         mouja: doc.moujaName,
+        volume: doc.volumeName,
         khatian: doc.khatian_no,
         dag: doc.dag_no,
         holding: doc.holding_no,
-        owner: doc.owners?.join(', ') || '—',
         fileCount: doc.files?.length || 0,
         files: doc.files
       }))
@@ -133,9 +149,9 @@ export default function RecordsSearch() {
 
           {/* Filters */}
           <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden mb-6">
-            <div className="h-1 bg-gradient-to-r from-emerald-600 to-orange-500"></div>
+            <div className="h-1 bg-emerald-700"></div>
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                 {/* Upazila */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -169,6 +185,25 @@ export default function RecordsSearch() {
                     {moujas.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Volume */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Volume (ভলিউম)
+                  </label>
+                  <select
+                    value={selectedVolume}
+                    onChange={(e) => setSelectedVolume(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                  >
+                    <option value="">All Volumes</option>
+                    {volumes.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
                       </option>
                     ))}
                   </select>
@@ -225,6 +260,8 @@ export default function RecordsSearch() {
                   <th className="text-left px-6 py-4 text-sm font-semibold">
                     Khatian / Holding / Dag
                   </th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold">Volume</th>{' '}
+                  {/* New column */}
                   <th className="text-left px-6 py-4 text-sm font-semibold">Record Type</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold">Remarks</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold">Files</th>
@@ -233,7 +270,7 @@ export default function RecordsSearch() {
 
               <tbody>
                 {!loading && records.length > 0 ? (
-                  records.map((record, index) => (
+                  records.map((record) => (
                     <tr key={record.id} className="border-b border-gray-200 hover:bg-gray-50">
                       <td className="px-6 py-3 font-semibold">{record.id}</td>
                       <td className="px-6 py-3">
@@ -262,6 +299,9 @@ export default function RecordsSearch() {
                           )}
                         </div>
                       </td>
+                      <td className="px-6 py-3">
+                        <span className="text-sm">{record.volume || 'N/A'}</span>
+                      </td>
                       <td className="px-6 py-5">
                         {record.doc_type ? (
                           <span
@@ -273,7 +313,6 @@ export default function RecordsSearch() {
                           '—'
                         )}
                       </td>
-                      {/* New Remarks column */}
                       <td className="px-6 py-5">
                         {record.remarks ? (
                           <span className="text-sm">{record.remarks}</span>
@@ -297,8 +336,8 @@ export default function RecordsSearch() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-gray-500">
-                      {loading ? 'Loading documents...' : 'No documents found!'}
+                    <td colSpan={7} className="text-center py-8 text-gray-500">
+                      {loading ? 'Loading records...' : 'No records found!'}
                     </td>
                   </tr>
                 )}

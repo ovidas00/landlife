@@ -53,6 +53,7 @@ export function getDB() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         upazila_id INTEGER NOT NULL,
         mouja_id INTEGER NOT NULL,
+        volume_id INTEGER NOT NULL,
         khatian_no TEXT,
         dag_no TEXT,
         holding_no TEXT,
@@ -60,7 +61,8 @@ export function getDB() {
         remarks TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (upazila_id) REFERENCES upazilas(id) ON DELETE CASCADE,
-        FOREIGN KEY (mouja_id) REFERENCES moujas(id) ON DELETE CASCADE
+        FOREIGN KEY (mouja_id) REFERENCES moujas(id) ON DELETE CASCADE,
+        FOREIGN KEY (volume_id) REFERENCES volumes(id) ON DELETE CASCADE
       )
     `
     ).run()

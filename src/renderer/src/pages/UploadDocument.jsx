@@ -4,8 +4,10 @@ import { useState, useEffect, useRef } from 'react'
 export default function UploadDocument() {
   const [upazilas, setUpazilas] = useState([])
   const [moujas, setMoujas] = useState([])
+  const [volumes, setVolumes] = useState([])
   const [selectedUpazila, setSelectedUpazila] = useState('')
   const [mouja, setMouja] = useState('')
+  const [volume, setVolume] = useState('')
   const [khatianNo, setKhatianNo] = useState('')
   const [dagNo, setDagNo] = useState('')
   const [holdingNo, setHoldingNo] = useState('')
@@ -27,6 +29,11 @@ export default function UploadDocument() {
     setMoujas(data)
   }
 
+  const loadVolumes = async (upazilaId) => {
+    const data = await window.api.getVolumes(upazilaId)
+    setVolumes(data)
+  }
+
   useEffect(() => {
     Promise.resolve().then(() => {
       loadUpazilas()
@@ -37,7 +44,9 @@ export default function UploadDocument() {
     Promise.resolve().then(() => {
       if (selectedUpazila) {
         loadMoujas(selectedUpazila)
+        loadVolumes(selectedUpazila)
         setMouja('')
+        setVolume('')
       }
     })
   }, [selectedUpazila])
@@ -66,11 +75,6 @@ export default function UploadDocument() {
       return
     }
 
-    if (!dagNo) {
-      alert('Please enter dag number')
-      return
-    }
-
     if (!isNotFound && !files.length) {
       alert('Please upload at least one document')
       return
@@ -81,6 +85,7 @@ export default function UploadDocument() {
     const payload = {
       upazilaId: selectedUpazila,
       moujaId: mouja,
+      volumeId: volume,
       khatianNo,
       dagNo,
       holdingNo,
@@ -146,13 +151,28 @@ export default function UploadDocument() {
                   <select
                     value={mouja}
                     onChange={(e) => setMouja(e.target.value)}
-                    disabled={!selectedUpazila}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
                   >
                     <option value="">Select Mouja</option>
                     {moujas.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block mb-2 font-medium">Volume *</label>
+                  <select
+                    value={volume}
+                    onChange={(e) => setVolume(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  >
+                    <option value="">Select Volume</option>
+                    {volumes.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
                       </option>
                     ))}
                   </select>
@@ -231,7 +251,7 @@ export default function UploadDocument() {
 
           {/* RIGHT */}
           <div className="bg-white rounded-xl shadow-sm border-2 border-gray-200 overflow-hidden">
-            <div className="h-1 bg-gradient-to-r from-emerald-600 to-orange-500"></div>
+            <div className="bg-emerald-700 h-1"></div>
 
             <div className="p-6">
               <h2 className="text-xl font-bold text-emerald-800 mb-4">Document Scans</h2>

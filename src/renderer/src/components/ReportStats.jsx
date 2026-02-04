@@ -1,15 +1,14 @@
 import { FileText } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-export default function ReportStats() {
+export default function ReportStats({ filters = {} }) {
   const [stats, setStats] = useState([])
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const data = await window.api.getDashboardState()
+        const data = await window.api.getReportState(filters)
 
-        // Only 5 stats excluding "Upazilas"
         setStats([
           {
             label: 'Total Records',
@@ -69,7 +68,7 @@ export default function ReportStats() {
     }
 
     fetchStats()
-  }, [])
+  }, [filters]) // refetch whenever filters change
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6">

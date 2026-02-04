@@ -104,7 +104,8 @@ ipcMain.handle('get-volumes', async (event, upazilaId) => {
 ipcMain.handle('upload-document', async (event, payload) => {
   const db = getDB()
 
-  const { upazilaId, moujaId, khatianNo, dagNo, holdingNo, docType, remarks, files } = payload
+  const { upazilaId, moujaId, volumeId, khatianNo, dagNo, holdingNo, docType, remarks, files } =
+    payload
 
   // folder to store PDFs
   const baseDir = join(app.getPath('userData'), 'documents')
@@ -115,11 +116,11 @@ ipcMain.handle('upload-document', async (event, payload) => {
     .prepare(
       `
       INSERT INTO documents
-      (upazila_id, mouja_id, khatian_no, dag_no, holding_no, doc_type, remarks)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      (upazila_id, mouja_id, volume_id, khatian_no, dag_no, holding_no, doc_type, remarks)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `
     )
-    .run(upazilaId, moujaId, khatianNo, dagNo, holdingNo, docType, remarks)
+    .run(upazilaId, moujaId, volumeId, khatianNo, dagNo, holdingNo, docType, remarks)
 
   const documentId = result.lastInsertRowid
 
@@ -144,7 +145,7 @@ ipcMain.handle('upload-document', async (event, payload) => {
 ipcMain.handle('get-documents', async (event, filters = {}) => {
   const db = getDB()
 
-  const { upazilaId, moujaId, docType, searchQuery, page = 1, pageSize = 50 } = filters
+  const { upazilaId, moujaId, volumeId, docType, searchQuery, page = 1, pageSize = 50 } = filters
 
   const offset = (page - 1) * pageSize
 
@@ -161,6 +162,12 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
   if (moujaId) {
     conditions.push('d.mouja_id = ?')
     params.push(moujaId)
+  }
+
+  // Volume filter
+  if (volumeId) {
+    conditions.push('d.volume_id = ?')
+    params.push(volumeId)
   }
 
   // Document type filter
@@ -188,32 +195,35 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
   const documents = db
     .prepare(
       `
-      SELECT 
-        d.id,
-        d.upazila_id,
-        d.mouja_id,
-        d.khatian_no,
-        d.dag_no,
-        d.holding_no,
-        d.doc_type,
-        d.remarks,
-        d.created_at,
-        u.name AS upazilaName,
-        m.name AS moujaName,
-        COALESCE(f.files, '') AS files
-      FROM documents d
-      LEFT JOIN upazilas u ON d.upazila_id = u.id
-      LEFT JOIN moujas m ON d.mouja_id = m.id
-      LEFT JOIN (
-        SELECT document_id,
-          GROUP_CONCAT(id || '::' || file_name || '::' || file_path, '|') AS files
-        FROM document_files
-        GROUP BY document_id
-      ) f ON f.document_id = d.id
-      ${whereClause}
-      ORDER BY d.id DESC
-      LIMIT ? OFFSET ?
-    `
+    SELECT 
+      d.id,
+      d.upazila_id,
+      d.mouja_id,
+      d.volume_id,
+      d.khatian_no,
+      d.dag_no,
+      d.holding_no,
+      d.doc_type,
+      d.remarks,
+      d.created_at,
+      u.name AS upazilaName,
+      m.name AS moujaName,
+      v.name AS volumeName,
+      COALESCE(f.files, '') AS files
+    FROM documents d
+    LEFT JOIN upazilas u ON d.upazila_id = u.id
+    LEFT JOIN moujas m ON d.mouja_id = m.id
+    LEFT JOIN volumes v ON d.volume_id = v.id
+    LEFT JOIN (
+      SELECT document_id,
+        GROUP_CONCAT(id || '::' || file_name || '::' || file_path, '|') AS files
+      FROM document_files
+      GROUP BY document_id
+    ) f ON f.document_id = d.id
+    ${whereClause}
+    ORDER BY d.id DESC
+    LIMIT ? OFFSET ?
+  `
     )
     .all(...params, pageSize, offset)
 
@@ -286,5 +296,62 @@ ipcMain.handle('get-dashboard-state', async () => {
     moderateRecords: docTypeCounts.moderate ?? 0,
     notFoundRecords: docTypeCounts.not_found ?? 0,
     docsByUpazila
+  }
+})
+
+ipcMain.handle('get-report-state', async (event, filters = {}) => {
+  const db = getDB()
+
+  const { upazilaId, moujaId, volumeId, docType } = filters
+
+  // Build WHERE conditions dynamically
+  const conditions = []
+  const params = {}
+
+  if (upazilaId) {
+    conditions.push('d.upazila_id = @upazilaId')
+    params.upazilaId = upazilaId
+  }
+  if (moujaId) {
+    conditions.push('d.mouja_id = @moujaId')
+    params.moujaId = moujaId
+  }
+  if (volumeId) {
+    conditions.push('d.volume_id = @volumeId')
+    params.volumeId = volumeId
+  }
+  if (docType) {
+    conditions.push('d.doc_type = @docType')
+    params.docType = docType
+  }
+
+  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+
+  // Total documents
+  const totalDocuments = db
+    .prepare(`SELECT COUNT(*) AS count FROM documents d ${whereClause}`)
+    .get(params).count
+
+  // Document count by type
+  const docTypeCounts = db
+    .prepare(
+      `
+      SELECT
+        SUM(CASE WHEN doc_type = 'usable' THEN 1 ELSE 0 END) AS usable,
+        SUM(CASE WHEN doc_type = 'unusable' THEN 1 ELSE 0 END) AS unusable,
+        SUM(CASE WHEN doc_type = 'moderate' THEN 1 ELSE 0 END) AS moderate,
+        SUM(CASE WHEN doc_type = 'not_found' THEN 1 ELSE 0 END) AS not_found
+      FROM documents d
+      ${whereClause}
+      `
+    )
+    .get(params)
+
+  return {
+    totalDocuments,
+    usableRecords: docTypeCounts.usable ?? 0,
+    unusableRecords: docTypeCounts.unusable ?? 0,
+    moderateRecords: docTypeCounts.moderate ?? 0,
+    notFoundRecords: docTypeCounts.not_found ?? 0
   }
 })

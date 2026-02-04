@@ -26,5 +26,6 @@ contextBridge.exposeInMainWorld('api', {
   getDocuments: (filters = {}) => ipcRenderer.invoke('get-documents', filters),
   openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
 
-  getDashboardState: () => ipcRenderer.invoke('get-dashboard-state')
+  getDashboardState: () => ipcRenderer.invoke('get-dashboard-state'),
+  getReportState: (filters = {}) => ipcRenderer.invoke('get-report-state', filters)
 })

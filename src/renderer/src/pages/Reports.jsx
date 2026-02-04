@@ -6,8 +6,10 @@ import ReportStats from '../components/ReportStats'
 export default function ReportsPage() {
   const [upazilas, setUpazilas] = useState([])
   const [moujas, setMoujas] = useState([])
+  const [volumes, setVolumes] = useState([])
   const [selectedUpazila, setSelectedUpazila] = useState('')
   const [selectedMouja, setSelectedMouja] = useState('')
+  const [selectedVolume, setSelectedVolume] = useState('')
   const [selectedDocType, setSelectedDocType] = useState('')
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
@@ -30,23 +32,33 @@ export default function ReportsPage() {
 
   // Load moujas on upazila change
   useEffect(() => {
-    const loadMoujas = async () => {
+    const loadData = async () => {
       if (!selectedUpazila) {
         setMoujas([])
+        setVolumes([])
         setSelectedMouja('')
+        setSelectedVolume('')
         return
       }
-      const data = await window.api.getMoujas(selectedUpazila)
-      setMoujas(data)
+
+      const [moujaData, volumeData] = await Promise.all([
+        window.api.getMoujas(selectedUpazila),
+        window.api.getVolumes(selectedUpazila)
+      ])
+
+      setMoujas(moujaData)
+      setVolumes(volumeData)
       setSelectedMouja('')
+      setSelectedVolume('')
     }
-    loadMoujas()
+
+    loadData()
   }, [selectedUpazila])
 
   // Fetch documents on filter/page change
   useEffect(() => {
     loadDocuments()
-  }, [selectedUpazila, selectedMouja, selectedDocType, page])
+  }, [selectedUpazila, selectedMouja, selectedVolume, selectedDocType, page])
 
   const loadDocuments = async () => {
     setLoading(true)
@@ -55,6 +67,7 @@ export default function ReportsPage() {
       if (selectedDocType) filters.docType = selectedDocType
       if (selectedUpazila) filters.upazilaId = selectedUpazila
       if (selectedMouja) filters.moujaId = selectedMouja
+      if (selectedVolume) filters.volumeId = selectedVolume
 
       const res = await window.api.getDocuments(filters)
       const docs = res?.data ?? res
@@ -65,6 +78,7 @@ export default function ReportsPage() {
         remarks: doc.remarks,
         upazila: doc.upazilaName,
         mouja: doc.moujaName,
+        volume: doc.volumeName,
         khatian: doc.khatian_no,
         dag: doc.dag_no,
         holding: doc.holding_no,
@@ -127,9 +141,9 @@ export default function ReportsPage() {
 
           {/* Filters */}
           <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden mb-6">
-            <div className="h-1 bg-gradient-to-r from-emerald-600 to-orange-500"></div>
+            <div className="h-1 bg-emerald-700"></div>
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {/* Upazila */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -168,6 +182,25 @@ export default function ReportsPage() {
                   </select>
                 </div>
 
+                {/* Volume */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Volume (ভলিউম)
+                  </label>
+                  <select
+                    value={selectedVolume}
+                    onChange={(e) => setSelectedVolume(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                  >
+                    <option value="">All Volumes</option>
+                    {volumes.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Document Type */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -189,7 +222,14 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          <ReportStats />
+          <ReportStats
+            filters={{
+              upazilaId: selectedUpazila || undefined,
+              moujaId: selectedMouja || undefined,
+              volumeId: selectedVolume || undefined,
+              docType: selectedDocType || undefined
+            }}
+          />
 
           {/* Results Table */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -201,6 +241,8 @@ export default function ReportsPage() {
                   <th className="text-left px-6 py-4 text-sm font-semibold">
                     Khatian / Holding / Dag
                   </th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold">Volume</th>{' '}
+                  {/* New column */}
                   <th className="text-left px-6 py-4 text-sm font-semibold">Record Type</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold">Remarks</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold">Files</th>
@@ -238,6 +280,9 @@ export default function ReportsPage() {
                           )}
                         </div>
                       </td>
+                      <td className="px-6 py-3">
+                        <span className="text-sm">{record.volume || 'N/A'}</span>
+                      </td>
                       <td className="px-6 py-5">
                         {record.doc_type ? (
                           <span
@@ -272,7 +317,7 @@ export default function ReportsPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-gray-500">
+                    <td colSpan={7} className="text-center py-8 text-gray-500">
                       {loading ? 'Loading records...' : 'No records found!'}
                     </td>
                   </tr>

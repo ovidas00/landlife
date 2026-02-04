@@ -16,6 +16,7 @@ function App() {
           <Route path="/search" element={<RecordsSearch />} />
           <Route path="/locations" element={<Locations />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/export" element={<h1>Backup/Export</h1>} />
         </Routes>
       </Layout>
     </Router>
