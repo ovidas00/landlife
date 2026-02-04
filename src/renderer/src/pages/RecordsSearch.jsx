@@ -185,7 +185,7 @@ export default function RecordsSearch() {
                       size={18}
                     />
                     <input
-                      type="text"
+                      type="search"
                       placeholder="Khatian, Holding or Dag..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
