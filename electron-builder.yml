@@ -1,5 +1,5 @@
 appId: com.electron.app
-productName: landlife
+productName: LandLife
 directories:
   buildResources: build
 files:

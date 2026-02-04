@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useState } from 'react'
-import itLogo from '../../../resources/it-logo.png'
+import logo from '../../../resources/icon.png'
 
 export default function Layout({ children }) {
   const location = useLocation() // current URL
@@ -35,12 +35,12 @@ export default function Layout({ children }) {
       <aside className="w-60 bg-white h-screen overflow-y-auto fixed border-r border-gray-200 flex flex-col">
         {/* Logo Header */}
         <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-800 rounded-lg flex items-center justify-center text-white p-1">
-              <img src={itLogo} alt="logo" className="w-full h-full object-contain" />
+          <div className="flex items-center gap-2">
+            <div className="w-12 h-12 flex items-center justify-center text-white">
+              <img src={logo} alt="logo" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">Edulife</h1>
+              <h1 className="text-lg font-bold text-gray-900">LandLife</h1>
               <p className="text-xs text-gray-500">Document System</p>
             </div>
           </div>
