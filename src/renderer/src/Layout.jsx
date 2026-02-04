@@ -1,14 +1,30 @@
-import { LayoutGrid, Upload, Search, MapPin, DatabaseBackup } from 'lucide-react'
+import {
+  LayoutGrid,
+  Upload,
+  Search,
+  MapPin,
+  DatabaseBackup,
+  FileChartColumn,
+  ChevronDown,
+  ChevronUp,
+  Settings
+} from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
+import { useState } from 'react'
 import itLogo from '../../../resources/it-logo.png'
 
 export default function Layout({ children }) {
-  const location = useLocation() // gives current URL path
+  const location = useLocation() // current URL
+  const [settingsOpen, setSettingsOpen] = useState(false) // toggle for settings submenu
 
   const navLinks = [
     { to: '/', icon: <LayoutGrid size={18} />, label: 'Dashboard' },
     { to: '/search', icon: <Search size={18} />, label: 'Search Records' },
-    { to: '/upload', icon: <Upload size={18} />, label: 'Upload Document' },
+    { to: '/upload', icon: <Upload size={18} />, label: 'Upload Record' },
+    { to: '/reports', icon: <FileChartColumn size={18} />, label: 'Reports' }
+  ]
+
+  const settingsLinks = [
     { to: '/locations', icon: <MapPin size={18} />, label: 'Manage Locations' },
     { to: '/export', icon: <DatabaseBackup size={18} />, label: 'Backup/Export' }
   ]
@@ -21,7 +37,7 @@ export default function Layout({ children }) {
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-emerald-800 rounded-lg flex items-center justify-center text-white p-1">
-              <img src={itLogo} alt="logo" />
+              <img src={itLogo} alt="logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-gray-900">Edulife</h1>
@@ -39,7 +55,7 @@ export default function Layout({ children }) {
                 key={link.to}
                 to={link.to}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors
-                  ${isActive ? 'bg-emerald-700 text-white font-medium' : 'text-gray-700 hover:bg-gray-100'}
+                  ${isActive ? 'bg-emerald-700 text-white font-medium' : 'font-medium text-gray-700 hover:bg-gray-100'}
                 `}
               >
                 {link.icon}
@@ -47,6 +63,40 @@ export default function Layout({ children }) {
               </Link>
             )
           })}
+
+          {/* Settings Section */}
+          <div>
+            <button
+              onClick={() => setSettingsOpen(!settingsOpen)}
+              className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <span className="flex items-center gap-3">
+                <Settings size={18} />
+                <span className="text-sm font-medium text-gray-700">Settings</span>
+              </span>
+              {settingsOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+
+            {settingsOpen && (
+              <div className="mt-1 ml-6 flex flex-col space-y-1">
+                {settingsLinks.map((link) => {
+                  const isActive = location.pathname === link.to
+                  return (
+                    <Link
+                      key={link.to}
+                      to={link.to}
+                      className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors
+                        ${isActive ? 'bg-emerald-700 text-white font-medium' : 'text-gray-700 hover:bg-gray-100'}
+                      `}
+                    >
+                      {link.icon}
+                      <span className="text-sm">{link.label}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Footer */}

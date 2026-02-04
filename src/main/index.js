@@ -229,11 +229,22 @@ ipcMain.handle('get-dashboard-state', async () => {
   // Total documents
   const totalDocuments = db.prepare(`SELECT COUNT(*) AS count FROM documents`).get().count
 
-  // Total files
-  const totalFiles = db.prepare(`SELECT COUNT(*) AS count FROM document_files`).get().count
-
   // Total upazilas
   const totalUpazilas = db.prepare(`SELECT COUNT(*) AS count FROM upazilas`).get().count
+
+  // Document count by type
+  const docTypeCounts = db
+    .prepare(
+      `
+      SELECT
+        SUM(CASE WHEN doc_type = 'usable' THEN 1 ELSE 0 END) AS usable,
+        SUM(CASE WHEN doc_type = 'unusable' THEN 1 ELSE 0 END) AS unusable,
+        SUM(CASE WHEN doc_type = 'moderate' THEN 1 ELSE 0 END) AS moderate,
+        SUM(CASE WHEN doc_type = 'not_found' THEN 1 ELSE 0 END) AS not_found
+      FROM documents
+    `
+    )
+    .get()
 
   // Document count by upazila
   const docsByUpazila = db
@@ -249,10 +260,12 @@ ipcMain.handle('get-dashboard-state', async () => {
     .all()
 
   return {
-    totalDocuments,
-    totalFiles,
     totalUpazilas,
-    uniqueOwners: totalDocuments,
+    totalDocuments,
+    usableRecords: docTypeCounts.usable,
+    unusableRecords: docTypeCounts.unusable,
+    moderateRecords: docTypeCounts.moderate,
+    notFoundRecords: docTypeCounts.not_found,
     docsByUpazila
   }
 })
