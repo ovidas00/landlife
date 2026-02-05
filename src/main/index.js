@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'node:path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -406,11 +406,20 @@ ipcMain.handle('get-report-state', async (event, filters = {}) => {
 ipcMain.handle('start-backup', async (event, password = null) => {
   const sourceDir = getDocumentFolder()
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-  const outputArchive = join(app.getPath('downloads'), `landlife-archive-${timestamp}.7z`)
+
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    title: 'Save backup archive',
+    defaultPath: join(app.getPath('downloads'), `landlife-archive-${timestamp}.7z`),
+    filters: [{ name: '7zip Archive', extensions: ['7z'] }]
+  })
+
+  if (canceled || !filePath) {
+    return { success: false, canceled: true }
+  }
 
   try {
-    await backupFolder(sourceDir, outputArchive, password)
-    return { success: true }
+    await backupFolder(sourceDir, filePath, password)
+    return { success: true, path: filePath }
   } catch (err) {
     console.error('Backup failed in main process:', err)
     throw err

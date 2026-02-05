@@ -24,8 +24,15 @@ export function getDocumentFolder() {
 
 export function backupFolder(sourceDir, outputArchive, password = null) {
   return new Promise((resolve, reject) => {
+    let bin = path7za
+
+    if (app.isPackaged) {
+      const relative = path7za.split('node_modules/')[1]
+      bin = join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', relative)
+    }
+
     const options = {
-      $bin: path7za,
+      $bin: bin,
       $progress: true,
       password: password || undefined
     }
