@@ -144,6 +144,9 @@ export default function RecordsSearch() {
         record={selectedRecord}
         isOpen={infoModalOpen}
         onClose={() => setInfoModalOpen(false)}
+        onDelete={() => {
+          loadDocuments()
+        }}
       />
 
       <div className="bg-gray-100 p-8">
@@ -357,7 +360,6 @@ export default function RecordsSearch() {
                             onClick={() => {
                               setSelectedRecord(record)
                               setInfoModalOpen(true)
-                              console.log(JSON.stringify(record))
                             }}
                           >
                             <Info size={16} />

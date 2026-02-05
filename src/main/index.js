@@ -249,6 +249,30 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
   return { data: result, total, page, pageSize }
 })
 
+ipcMain.handle('delete-document', async (event, documentId) => {
+  const db = getDB()
+
+  const files = db
+    .prepare(`SELECT file_path FROM document_files WHERE document_id = ?`)
+    .all(documentId)
+
+  for (const file of files) {
+    if (fs.existsSync(file.file_path)) {
+      try {
+        fs.unlinkSync(file.file_path)
+      } catch (err) {
+        console.error(`Failed to delete file ${file.file_path}:`, err)
+      }
+    }
+  }
+
+  db.prepare(`DELETE FROM document_files WHERE document_id = ?`).run(documentId)
+
+  db.prepare(`DELETE FROM documents WHERE id = ?`).run(documentId)
+
+  return { success: true }
+})
+
 ipcMain.handle('open-file', async (event, filePath) => {
   if (!filePath) return
   await shell.openPath(filePath) // opens PDF in default system app

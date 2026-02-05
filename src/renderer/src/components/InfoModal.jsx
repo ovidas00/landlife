@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
-import { X } from 'lucide-react'
+import { X, Trash2 } from 'lucide-react'
 
-export default function RecordInfoModal({ record = null, isOpen, onClose }) {
+export default function RecordInfoModal({ record = null, isOpen, onClose, onDelete }) {
   useEffect(() => {
     if (!isOpen) return
 
@@ -27,11 +27,26 @@ export default function RecordInfoModal({ record = null, isOpen, onClose }) {
         onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside modal
       >
         {/* Header */}
+
         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Record Info ({record.id})</h2>
-          <button onClick={onClose} className="p-2 rounded hover:bg-gray-100 transition-colors">
-            <X size={20} />
-          </button>
+          <div className="flex gap-2">
+            <button
+              className="p-2 rounded hover:bg-red-100 transition-colors"
+              onClick={() => {
+                if (confirm(`Delete record with record id ${record.id}?`)) {
+                  window.api.deleteDocument(record.id)
+                  onClose()
+                  onDelete()
+                }
+              }}
+            >
+              <Trash2 size={20} className="text-red-500" />
+            </button>
+            <button onClick={onClose} className="p-2 rounded hover:bg-gray-100 transition-colors">
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Body */}
