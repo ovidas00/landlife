@@ -1,15 +1,16 @@
 appId: com.electron.app
 productName: LandLife
+compression: maximum
+removePackageScripts: true
 directories:
   buildResources: build
 files:
   - '!**/.vscode/*'
   - '!src/*'
+  - '!**/*.map'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-asarUnpack:
-  - resources/**
 win:
   executableName: landlife
 nsis:
@@ -29,8 +30,6 @@ dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
   target:
-    - AppImage
-    - snap
     - deb
   maintainer: electronjs.org
   category: Utility
