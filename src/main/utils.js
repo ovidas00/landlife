@@ -27,7 +27,8 @@ export function backupFolder(sourceDir, outputArchive, password = null) {
     let bin = path7za
 
     if (app.isPackaged) {
-      const relative = path7za.split('node_modules/')[1]
+      const relative = relative(join(__dirname, 'node_modules'), path7za)
+
       bin = join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', relative)
     }
 
