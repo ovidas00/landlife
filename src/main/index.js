@@ -78,6 +78,13 @@ ipcMain.handle('get-upazilas', async () => {
   return rows
 })
 
+ipcMain.handle('delete-upazila', (event, upazilaId) => {
+  const db = getDB()
+  db.prepare('DELETE FROM upazilas WHERE id = ?').run(upazilaId)
+
+  return { success: true }
+})
+
 ipcMain.handle('add-mouza', (event, name, upazilaId) => {
   const db = getDB()
   db.prepare('INSERT INTO mouzas (name, upazila_id) VALUES (?, ?)').run(name, upazilaId)
@@ -90,9 +97,23 @@ ipcMain.handle('get-mouzas', (event, upazilaId) => {
   return db.prepare('SELECT * FROM mouzas WHERE upazila_id = ?').all(upazilaId)
 })
 
+ipcMain.handle('delete-mouza', (event, mouzaId) => {
+  const db = getDB()
+  db.prepare('DELETE FROM mouzas WHERE id = ?').run(mouzaId)
+
+  return { success: true }
+})
+
 ipcMain.handle('add-volume', (event, name, upazilaId) => {
   const db = getDB()
   db.prepare('INSERT INTO volumes (name, upazila_id) VALUES (?, ?)').run(name, upazilaId)
+
+  return { success: true }
+})
+
+ipcMain.handle('delete-volume', (event, volumeId) => {
+  const db = getDB()
+  db.prepare('DELETE FROM volumes WHERE id = ?').run(volumeId)
 
   return { success: true }
 })

@@ -117,7 +117,13 @@ export default function Locations() {
                   {upazilas.map((item, index) => (
                     <div
                       key={index}
-                      className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm border border-gray-200"
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm border border-gray-200 cursor-pointer"
+                      onClick={() => {
+                        if (confirm(`Delete ${item.name}?`)) {
+                          window.api.deleteUpazila(item.id)
+                          loadUpazilas()
+                        }
+                      }}
                     >
                       <Check size={14} className="text-gray-600" />
                       <span>{item.name}</span>
@@ -200,7 +206,13 @@ export default function Locations() {
                   {mouzas.map((m) => (
                     <div
                       key={m.id}
-                      className="px-3 py-2 bg-orange-50 text-orange-700 rounded-lg text-sm border border-orange-200"
+                      className="px-3 py-2 bg-orange-50 text-orange-700 rounded-lg text-sm border border-orange-200 cursor-pointer"
+                      onClick={() => {
+                        if (confirm(`Delete ${m.name}?`)) {
+                          window.api.deleteMouza(m.id)
+                          loadMouzas(selectedUpazila)
+                        }
+                      }}
                     >
                       {m.name}
                     </div>
@@ -280,7 +292,13 @@ export default function Locations() {
                   {volumes.map((v) => (
                     <div
                       key={v.id}
-                      className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm border border-blue-200"
+                      className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm border border-blue-200 cursor-pointer"
+                      onClick={() => {
+                        if (confirm(`Delete ${v.name}?`)) {
+                          window.api.deleteVolume(v.id)
+                          loadVolumes(selectedUpazilaVolume)
+                        }
+                      }}
                     >
                       {v.name}
                     </div>

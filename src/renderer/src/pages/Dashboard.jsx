@@ -146,7 +146,7 @@ export default function Dashboard() {
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <h3 className="text-lg font-bold text-gray-900">{region.name}</h3>
-                    <span className="inline-flex items-center justify-center w-8 h-8 bg-gray-100 text-gray-700 rounded-full text-sm font-semibold">
+                    <span className="inline-flex items-center justify-center px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-semibold">
                       {region.count}
                     </span>
                   </div>

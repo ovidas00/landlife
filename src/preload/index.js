@@ -3,12 +3,15 @@ const { contextBridge, ipcRenderer } = require('electron')
 contextBridge.exposeInMainWorld('api', {
   addUpazila: (name) => ipcRenderer.invoke('add-upazilla', name),
   getUpazilas: () => ipcRenderer.invoke('get-upazilas'),
+  deleteUpazila: (upazilaId) => ipcRenderer.invoke('delete-upazila', upazilaId),
 
   addMouza: (name, upazilaId) => ipcRenderer.invoke('add-mouza', name, upazilaId),
   getMouzas: (upazilaId) => ipcRenderer.invoke('get-mouzas', upazilaId),
+  deleteMouza: (mouzaId) => ipcRenderer.invoke('delete-mouza', mouzaId),
 
   addVolume: (name, upazilaId) => ipcRenderer.invoke('add-volume', name, upazilaId),
   getVolumes: (upazilaId) => ipcRenderer.invoke('get-volumes', upazilaId),
+  deleteVolume: (volumeId) => ipcRenderer.invoke('delete-volume', volumeId),
 
   uploadDocument: async (data) => {
     const files = await Promise.all(
