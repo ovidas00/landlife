@@ -31,5 +31,10 @@ contextBridge.exposeInMainWorld('api', {
   openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
 
   getDashboardState: () => ipcRenderer.invoke('get-dashboard-state'),
-  getReportState: (filters = {}) => ipcRenderer.invoke('get-report-state', filters)
+  getReportState: (filters = {}) => ipcRenderer.invoke('get-report-state', filters),
+
+  startBackup: (sourceDir, outputArchive, password = null) =>
+    ipcRenderer.invoke('start-backup', sourceDir, outputArchive, password),
+  onBackupProgress: (callback) =>
+    ipcRenderer.on('backup-progress', (event, progress) => callback(progress))
 })

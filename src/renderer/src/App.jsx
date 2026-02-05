@@ -5,6 +5,7 @@ import UploadDocument from './pages/UploadDocument'
 import RecordsSearch from './pages/RecordsSearch'
 import Dashboard from './pages/Dashboard'
 import ReportsPage from './pages/Reports'
+import { ExportPage } from './pages/Export'
 
 function App() {
   return (
@@ -16,7 +17,7 @@ function App() {
           <Route path="/search" element={<RecordsSearch />} />
           <Route path="/locations" element={<Locations />} />
           <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/export" element={<h1>Backup/Export</h1>} />
+          <Route path="/export" element={<ExportPage />} />
         </Routes>
       </Layout>
     </Router>

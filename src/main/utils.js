@@ -1,6 +1,8 @@
 import { app } from 'electron'
 import { join } from 'node:path'
 import fs from 'node:fs'
+import Seven from 'node-7z'
+import { path7za } from '7zip-bin'
 
 export function getDocumentFolder() {
   let folder
@@ -18,4 +20,27 @@ export function getDocumentFolder() {
 
   if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true })
   return folder
+}
+
+export function backupFolder(sourceDir, outputArchive, password = null) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      $bin: path7za,
+      $progress: true,
+      password: password || undefined
+    }
+
+    const items = fs.readdirSync(sourceDir).map((f) => join(sourceDir, f))
+    const archive = Seven.add(outputArchive, items, options)
+
+    archive.on('end', () => {
+      console.log(`Backup complete! Archive saved at: ${outputArchive}`)
+      resolve()
+    })
+
+    archive.on('error', (err) => {
+      console.error('Backup failed:', err)
+      reject(err)
+    })
+  })
 }

@@ -4,7 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { getDB } from './db'
 import fs from 'node:fs'
-import { getDocumentFolder } from './utils'
+import { backupFolder, getDocumentFolder } from './utils'
 
 function createWindow() {
   // Create the browser window.
@@ -400,5 +400,19 @@ ipcMain.handle('get-report-state', async (event, filters = {}) => {
     unusableRecords: docTypeCounts.unusable ?? 0,
     moderateRecords: docTypeCounts.moderate ?? 0,
     notFoundRecords: docTypeCounts.not_found ?? 0
+  }
+})
+
+ipcMain.handle('start-backup', async (event, password = null) => {
+  const sourceDir = getDocumentFolder()
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+  const outputArchive = join(app.getPath('downloads'), `landlife-archive-${timestamp}.7z`)
+
+  try {
+    await backupFolder(sourceDir, outputArchive, password)
+    return { success: true }
+  } catch (err) {
+    console.error('Backup failed in main process:', err)
+    throw err
   }
 })

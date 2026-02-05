@@ -40,7 +40,7 @@ export default function Layout({ children }) {
               <img src={logo} alt="logo" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">LandLife</h1>
+              <h1 className="text-lg font-bold text-gray-900">Edulife</h1>
               <p className="text-xs text-gray-500">Document System</p>
             </div>
           </div>

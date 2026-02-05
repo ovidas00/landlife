@@ -21,8 +21,10 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@tailwindcss/vite": "^4.1.18",
+    "7zip-bin": "^5.2.0",
     "better-sqlite3": "^12.6.2",
     "lucide-react": "^0.563.0",
+    "node-7z": "^3.0.0",
     "react-router-dom": "^7.13.0",
     "tailwindcss": "^4.1.18"
   },

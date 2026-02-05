@@ -1,5 +1,6 @@
 import { FileText, MapPin } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import icon from '../../../../resources/kgc-logo.png?asset'
 
 export default function Dashboard() {
   const [stats, setStats] = useState([])
@@ -95,11 +96,14 @@ export default function Dashboard() {
     <div className="bg-gray-100 p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Dashboard Overview</h1>
-          <p className="text-gray-600">
-            Comprehensive view of your land document records and regional distribution.
-          </p>
+        <div className="mb-8 flex items-center gap-4">
+          <img src={icon} alt="Logo" className="w-18 h-18 object-contain" />
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Khagrachari Hill District</h1>
+            <p className="text-gray-600">
+              Comprehensive view of land document records and regional distribution.
+            </p>
+          </div>
         </div>
 
         {/* Stats Grid */}
