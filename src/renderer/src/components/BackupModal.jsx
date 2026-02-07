@@ -103,14 +103,14 @@ export default function BackupModal({ isOpen, onClose }) {
           {/* Actions */}
           <div className="flex justify-end gap-2">
             <button
-              className="px-4 py-2 rounded-lg bg-gray-100"
+              className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200"
               onClick={onClose}
               disabled={loading}
             >
               Cancel
             </button>
             <button
-              className="px-6 py-2 bg-emerald-700 text-white rounded-lg"
+              className="px-6 py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800"
               onClick={handleStartBackup}
               disabled={loading}
             >

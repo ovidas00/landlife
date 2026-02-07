@@ -5,7 +5,7 @@ import UploadDocument from './pages/UploadDocument'
 import RecordsSearch from './pages/RecordsSearch'
 import Dashboard from './pages/Dashboard'
 import ReportsPage from './pages/Reports'
-import { ExportPage } from './pages/Export'
+import ExportPage from './pages/Export'
 import UpdateDocument from './pages/UpdateDocument'
 
 function App() {

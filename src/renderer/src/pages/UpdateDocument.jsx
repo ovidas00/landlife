@@ -381,13 +381,13 @@ export default function UpdateDocument() {
                     <h2 className="text-xl font-bold text-red-700 mb-4">Delete Document</h2>
                     <p className="text-red-600 mb-4">
                       Warning: This action cannot be undone. All files associated with this document
-                      will be permanently deleted. To confirm, enter the document ID below.
+                      will be permanently deleted. To confirm, enter the document serial below.
                     </p>
 
                     {/* Input for confirmation */}
                     <input
                       type="text"
-                      placeholder="Enter Document ID"
+                      placeholder="Enter Document SL"
                       value={deleteId}
                       onChange={(e) => setDeleteId(e.target.value)}
                       className="w-full px-4 py-2 mb-4 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
