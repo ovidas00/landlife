@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import fs from 'node:fs'
 import Seven from 'node-7z'
 import { path7za } from '7zip-bin'
+import os from 'node:os'
 
 export function getDocumentFolder() {
   let folder
@@ -22,14 +23,13 @@ export function getDocumentFolder() {
   return folder
 }
 
-export function backupFolder(sourceDir, outputArchive, password = null) {
+export async function backupFolder(sourceDir, outputArchive, password = null) {
   return new Promise((resolve, reject) => {
     let bin
 
     if (app.isPackaged) {
       const nm = path7za.indexOf('node_modules')
       const relative = path7za.slice(nm + 'node_modules'.length + 1)
-
       bin = join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', relative)
     } else {
       bin = path7za
@@ -41,16 +41,36 @@ export function backupFolder(sourceDir, outputArchive, password = null) {
       password: password || undefined
     }
 
-    const items = fs.readdirSync(sourceDir).map((f) => join(sourceDir, f))
+    // Copy app.db to temp folder
+    const dbPath = join(sourceDir, 'app.db')
+    const tempDir = join(os.tmpdir(), `backup-temp-${Date.now()}`)
+    fs.mkdirSync(tempDir, { recursive: true })
+    const tempDbPath = join(tempDir, 'app.db')
+    fs.copyFileSync(dbPath, tempDbPath)
+
+    // Add all files in sourceDir except app.db
+    const items = fs
+      .readdirSync(sourceDir)
+      .filter((f) => f !== 'app.db')
+      .map((f) => join(sourceDir, f))
+
+    // Include the copied app.db
+    items.push(tempDbPath)
+
     const archive = Seven.add(outputArchive, items, options)
 
     archive.on('end', () => {
       console.log(`Backup complete! Archive saved at: ${outputArchive}`)
+      // Clean up temp DB
+      fs.unlinkSync(tempDbPath)
+      fs.rmdirSync(tempDir)
       resolve()
     })
 
     archive.on('error', (err) => {
       console.error('Backup failed:', err)
+      if (fs.existsSync(tempDbPath)) fs.unlinkSync(tempDbPath)
+      if (fs.existsSync(tempDir)) fs.rmdirSync(tempDir)
       reject(err)
     })
   })
