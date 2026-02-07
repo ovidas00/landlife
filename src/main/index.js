@@ -137,10 +137,10 @@ ipcMain.handle('upload-document', async (event, payload) => {
   const result = db
     .prepare(
       `
-      INSERT INTO documents
-      (upazila_id, mouza_id, volume_id, khatian_no, dag_no, holding_no, doc_type, remarks)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `
+    INSERT INTO documents
+    (upazila_id, mouza_id, volume_id, khatian_no, dag_no, holding_no, doc_type, remarks, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+6 hours'), datetime('now', '+6 hours'))
+  `
     )
     .run(upazilaId, mouzaId, volumeId, khatianNo, dagNo, holdingNo, docType, remarks)
 
@@ -339,18 +339,18 @@ ipcMain.handle('update-document', async (event, payload) => {
   // Update main document
   db.prepare(
     `
-    UPDATE documents SET
-      upazila_id = ?,
-      mouza_id = ?,
-      volume_id = ?,
-      khatian_no = ?,
-      dag_no = ?,
-      holding_no = ?,
-      doc_type = ?,
-      remarks = ?,
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = ?
-    `
+  UPDATE documents SET
+    upazila_id = ?,
+    mouza_id = ?,
+    volume_id = ?,
+    khatian_no = ?,
+    dag_no = ?,
+    holding_no = ?,
+    doc_type = ?,
+    remarks = ?,
+    updated_at = datetime('now', '+6 hours')
+  WHERE id = ?
+  `
   ).run(upazilaId, mouzaId, volumeId, khatianNo, dagNo, holdingNo, docType, remarks, id)
 
   // Remove deleted files
