@@ -1,10 +1,11 @@
 import { Upload, X, File } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
-import { useLocation } from 'react-router-dom' // assuming you use React Router
+import { useLocation, useNavigate } from 'react-router-dom' // assuming you use React Router
 import Breadcrumb from '../components/Breadcrumb'
 
 export default function UpdateDocument() {
   const location = useLocation()
+  const navigate = useNavigate()
   const documentId = location.state?.documentId
   const [upazilas, setUpazilas] = useState([])
   const [mouzas, setMouzas] = useState([])
@@ -21,6 +22,7 @@ export default function UpdateDocument() {
   const [files, setFiles] = useState([]) // new files to upload
   const [existingFiles, setExistingFiles] = useState([]) // files already uploaded
   const [loading, setLoading] = useState(false)
+  const [deleteId, setDeleteId] = useState('')
 
   const fileInputRef = useRef(null)
   const isNotFound = docType === 'not_found'
@@ -343,6 +345,54 @@ export default function UpdateDocument() {
               >
                 {loading ? 'Updating...' : 'Update Document'}
               </button>
+
+              {/* Delete section */}
+              <div className="bg-white rounded-xl mt-6 border border-dashed border-red-500">
+                <div className="p-6">
+                  <h2 className="text-xl font-bold text-red-700 mb-4">Delete Document</h2>
+                  <p className="text-red-600 mb-4">
+                    Warning: This action cannot be undone. All files associated with this document
+                    will be permanently deleted. To confirm, enter the document ID below.
+                  </p>
+
+                  {/* Input for confirmation */}
+                  <input
+                    type="text"
+                    placeholder="Enter Document ID"
+                    value={deleteId}
+                    onChange={(e) => setDeleteId(e.target.value)}
+                    className="w-full px-4 py-2 mb-4 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  />
+
+                  <button
+                    onClick={async () => {
+                      if (deleteId !== documentId.toString()) {
+                        alert('Document ID does not match. Deletion cancelled.')
+                        return
+                      }
+
+                      if (
+                        !window.confirm(
+                          'Are you sure you want to delete this document? This cannot be undone.'
+                        )
+                      )
+                        return
+
+                      try {
+                        await window.api.deleteDocument(documentId)
+                        alert('Document deleted successfully')
+                        navigate('/search')
+                      } catch (err) {
+                        console.error(err)
+                        alert('Failed to delete document')
+                      }
+                    }}
+                    className="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 font-bold"
+                  >
+                    Delete Document
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
