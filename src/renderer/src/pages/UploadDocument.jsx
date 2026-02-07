@@ -96,16 +96,20 @@ export default function UploadDocument() {
     }
 
     try {
-      await window.api.uploadDocument(payload)
+      const result = await window.api.uploadDocument(payload)
 
-      showSuccess('Document uploaded successfully')
+      if (result?.success) {
+        showSuccess('Document uploaded successfully')
 
-      setKhatianNo('')
-      setDagNo('')
-      setHoldingNo('')
-      setDocType('')
-      setRemarks('')
-      setFiles([])
+        setKhatianNo('')
+        setDagNo('')
+        setHoldingNo('')
+        setDocType('')
+        setRemarks('')
+        setFiles([])
+      } else {
+        showError('Upload failed')
+      }
     } catch (err) {
       console.error(err)
       showError('Upload failed')
