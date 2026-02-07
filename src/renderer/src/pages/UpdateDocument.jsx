@@ -1,20 +1,25 @@
 import { Upload, X, File } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom' // assuming you use React Router
+import Breadcrumb from '../components/Breadcrumb'
 
-export default function UpdateDocument({ document = null }) {
+export default function UpdateDocument() {
+  const location = useLocation()
+  const documentId = location.state?.documentId
   const [upazilas, setUpazilas] = useState([])
   const [mouzas, setMouzas] = useState([])
   const [volumes, setVolumes] = useState([])
 
-  const [selectedUpazila, setSelectedUpazila] = useState(document?.upazilaId || '')
-  const [mouza, setMouza] = useState(document?.mouzaId || '')
-  const [volume, setVolume] = useState(document?.volumeId || '')
-  const [khatianNo, setKhatianNo] = useState(document?.khatianNo || '')
-  const [dagNo, setDagNo] = useState(document?.dagNo || '')
-  const [holdingNo, setHoldingNo] = useState(document?.holdingNo || '')
-  const [docType, setDocType] = useState(document?.docType || 'usable')
-  const [remarks, setRemarks] = useState(document?.remarks || '')
-  const [files, setFiles] = useState(document?.files || []) // existing + new files
+  const [selectedUpazila, setSelectedUpazila] = useState('')
+  const [mouza, setMouza] = useState('')
+  const [volume, setVolume] = useState('')
+  const [khatianNo, setKhatianNo] = useState('')
+  const [dagNo, setDagNo] = useState('')
+  const [holdingNo, setHoldingNo] = useState('')
+  const [docType, setDocType] = useState('usable')
+  const [remarks, setRemarks] = useState('')
+  const [files, setFiles] = useState([]) // new files to upload
+  const [existingFiles, setExistingFiles] = useState([]) // files already uploaded
   const [loading, setLoading] = useState(false)
 
   const fileInputRef = useRef(null)
@@ -35,25 +40,40 @@ export default function UpdateDocument({ document = null }) {
     setVolumes(data)
   }
 
-  // Load upazilas initially
+  const loadDocument = async () => {
+    if (!documentId) return
+    const doc = await window.api.getDocumentById(documentId)
+    if (!doc) return alert('Document not found')
+
+    setSelectedUpazila(doc.upazila_id)
+    setMouza(doc.mouza_id)
+    setVolume(doc.volume_id)
+    setKhatianNo(doc.khatian_no || '')
+    setDagNo(doc.dag_no || '')
+    setHoldingNo(doc.holding_no || '')
+    setDocType(doc.doc_type || 'usable')
+    setRemarks(doc.remarks || '')
+    setExistingFiles(doc.files || [])
+  }
+
   useEffect(() => {
-    loadUpazilas()
+    Promise.resolve().then(() => {
+      loadUpazilas()
+      loadDocument()
+    })
   }, [])
 
-  // Load related mouzas/volumes when upazila changes
   useEffect(() => {
-    if (selectedUpazila) {
-      loadMouzas(selectedUpazila)
-      loadVolumes(selectedUpazila)
-      setMouza(document?.mouzaId || '')
-      setVolume(document?.volumeId || '')
-    } else {
-      setMouza('')
-      setVolume('')
-    }
-  }, [selectedUpazila, document])
+    Promise.resolve().then(() => {
+      if (selectedUpazila) {
+        loadMouzas(selectedUpazila)
+        loadVolumes(selectedUpazila)
+        setMouza((prev) => prev) // keep selection if possible
+        setVolume((prev) => prev)
+      }
+    })
+  }, [selectedUpazila])
 
-  // Handle new files
   const handleFiles = (fileList) => {
     if (isNotFound) return
     const selected = Array.from(fileList)
@@ -64,11 +84,16 @@ export default function UpdateDocument({ document = null }) {
 
   const onDrop = (e) => {
     e.preventDefault()
+    if (isNotFound) return
     handleFiles(e.dataTransfer.files)
   }
 
-  const removeFile = (index) => {
+  const removeNewFile = (index) => {
     setFiles(files.filter((_, i) => i !== index))
+  }
+
+  const removeExistingFile = (id) => {
+    setExistingFiles(existingFiles.filter((f) => f.id !== id))
   }
 
   const submitDocument = async () => {
@@ -77,7 +102,7 @@ export default function UpdateDocument({ document = null }) {
       return
     }
 
-    if (!isNotFound && files.length === 0) {
+    if (!isNotFound && !files.length && !existingFiles.length) {
       alert('Please upload at least one document')
       return
     }
@@ -85,7 +110,7 @@ export default function UpdateDocument({ document = null }) {
     setLoading(true)
 
     const payload = {
-      id: document?.id || null, // send id if updating
+      id: documentId,
       upazilaId: selectedUpazila,
       mouzaId: mouza,
       volumeId: volume,
@@ -94,30 +119,16 @@ export default function UpdateDocument({ document = null }) {
       holdingNo,
       docType,
       remarks,
-      files
+      newFiles: files, // files added in this session
+      existingFiles // files to keep
     }
 
     try {
-      if (document) {
-        // Update existing
-        await window.api.updateDocument(payload)
-        alert('Document updated successfully')
-      } else {
-        // Create new
-        await window.api.uploadDocument(payload)
-        alert('Document uploaded successfully')
-        // Reset form
-        setKhatianNo('')
-        setDagNo('')
-        setHoldingNo('')
-        setDocType('usable')
-        setRemarks('')
-        setFiles([])
-        setSelectedUpazila('')
-      }
+      await window.api.updateDocument(payload)
+      alert('Document updated successfully')
     } catch (err) {
       console.error(err)
-      alert('Operation failed')
+      alert('Update failed')
     }
 
     setLoading(false)
@@ -126,23 +137,19 @@ export default function UpdateDocument({ document = null }) {
   return (
     <div className="bg-gray-100 p-8">
       <div className="max-w-6xl mx-auto">
+        <Breadcrumb />
+
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">
-            {document ? 'Update Document' : 'Upload Document'}
-          </h1>
-          <p className="text-gray-600">
-            {document
-              ? 'Edit existing land document information'
-              : 'Register new land documents to the secure archive.'}
-          </p>
+          <h1 className="text-4xl font-bold text-grey-900 mb-3">Edit Document</h1>
+          <p className="text-gray-600">Edit and update existing land document details.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* LEFT: Form Fields */}
+          {/* LEFT */}
           <div className="space-y-6">
-            {/* Location */}
             <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
               <div className="h-1 bg-emerald-700"></div>
+
               <div className="p-6 space-y-4">
                 <h2 className="text-xl font-bold text-emerald-800">Location Details</h2>
 
@@ -196,9 +203,9 @@ export default function UpdateDocument({ document = null }) {
               </div>
             </div>
 
-            {/* Land Records */}
             <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
               <div className="h-1 bg-emerald-700"></div>
+
               <div className="p-6 space-y-4">
                 <h2 className="text-xl font-bold text-emerald-800">Land Records</h2>
 
@@ -265,12 +272,14 @@ export default function UpdateDocument({ document = null }) {
             </div>
           </div>
 
-          {/* RIGHT: File Upload */}
+          {/* RIGHT */}
           <div className="bg-white rounded-xl shadow-sm border-2 border-gray-200 overflow-hidden">
             <div className="bg-emerald-700 h-1"></div>
+
             <div className="p-6">
               <h2 className="text-xl font-bold text-emerald-800 mb-4">Document Scans</h2>
 
+              {/* upload area */}
               <div
                 onClick={() => !isNotFound && fileInputRef.current.click()}
                 onDrop={onDrop}
@@ -293,17 +302,33 @@ export default function UpdateDocument({ document = null }) {
                 />
               </div>
 
+              {/* existing files */}
+              {existingFiles.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {existingFiles.map((f) => (
+                    <div key={f.id} className="flex justify-between bg-gray-100 p-2 rounded">
+                      <div className="flex items-center gap-2">
+                        <File size={20} />
+                        <span>{f.file_name}</span>
+                      </div>
+                      <button onClick={() => removeExistingFile(f.id)}>
+                        <X size={18} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* new files */}
               {files.length > 0 && (
-                <div
-                  className={`mt-4 space-y-2 ${isNotFound ? 'opacity-40 pointer-events-none' : ''}`}
-                >
+                <div className="mt-4 space-y-2">
                   {files.map((f, i) => (
                     <div key={i} className="flex justify-between bg-gray-100 p-2 rounded">
                       <div className="flex items-center gap-2">
                         <File size={20} />
                         <span>{f.name}</span>
                       </div>
-                      <button onClick={() => removeFile(i)}>
+                      <button onClick={() => removeNewFile(i)}>
                         <X size={18} />
                       </button>
                     </div>
@@ -316,13 +341,7 @@ export default function UpdateDocument({ document = null }) {
                 disabled={loading}
                 className="mt-6 w-full bg-emerald-700 text-white py-3 rounded-lg hover:bg-emerald-800 disabled:opacity-50 font-bold"
               >
-                {loading
-                  ? document
-                    ? 'Updating...'
-                    : 'Uploading...'
-                  : document
-                    ? 'Update Document'
-                    : 'Submit Document'}
+                {loading ? 'Updating...' : 'Update Document'}
               </button>
             </div>
           </div>

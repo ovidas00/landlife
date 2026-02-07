@@ -27,6 +27,21 @@ contextBridge.exposeInMainWorld('api', {
     })
   },
   getDocuments: (filters = {}) => ipcRenderer.invoke('get-documents', filters),
+  getDocumentById: (documentId) => ipcRenderer.invoke('get-document-by-id', documentId),
+  updateDocument: async ({ newFiles = [], existingFiles = [], ...rest }) => {
+    const filesWithBuffer = await Promise.all(
+      newFiles.map(async (f) => ({
+        name: f.name,
+        buffer: await f.arrayBuffer()
+      }))
+    )
+
+    return ipcRenderer.invoke('update-document', {
+      ...rest,
+      newFiles: filesWithBuffer,
+      existingFiles
+    })
+  },
   deleteDocument: (documentId) => ipcRenderer.invoke('delete-document', documentId),
   openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
 

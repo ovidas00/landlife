@@ -270,6 +270,123 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
   return { data: result, total, page, pageSize }
 })
 
+ipcMain.handle('get-document-by-id', async (event, documentId) => {
+  if (!documentId) throw new Error('Document ID is required')
+
+  const db = getDB()
+
+  // Fetch the document with joined names and files
+  const doc = db
+    .prepare(
+      `
+      SELECT 
+        d.*,
+        u.name AS upazilaName,
+        m.name AS mouzaName,
+        v.name AS volumeName,
+        COALESCE(f.files, '') AS files
+      FROM documents d
+      LEFT JOIN upazilas u ON d.upazila_id = u.id
+      LEFT JOIN mouzas m ON d.mouza_id = m.id
+      LEFT JOIN volumes v ON d.volume_id = v.id
+      LEFT JOIN (
+        SELECT document_id,
+          GROUP_CONCAT(id || '::' || file_name || '::' || file_path, '|') AS files
+        FROM document_files
+        GROUP BY document_id
+      ) f ON f.document_id = d.id
+      WHERE d.id = ?
+      `
+    )
+    .get(documentId)
+
+  if (!doc) return null
+
+  // Map files
+  const files = doc.files
+    ? doc.files.split('|').map((str) => {
+        const [fileId, file_name, file_path] = str.split('::')
+        return { id: parseInt(fileId), file_name, file_path }
+      })
+    : []
+
+  return { ...doc, files }
+})
+
+ipcMain.handle('update-document', async (event, payload) => {
+  const db = getDB()
+
+  const {
+    id,
+    upazilaId,
+    mouzaId,
+    volumeId,
+    khatianNo,
+    dagNo,
+    holdingNo,
+    docType,
+    remarks,
+    newFiles = [], // files uploaded in this session
+    existingFiles = [] // files user wants to keep
+  } = payload
+
+  if (!id) throw new Error('Document ID is required')
+
+  // folder to store PDFs
+  const baseDir = join(getDocumentFolder(), 'documents')
+  if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
+
+  // Update main document
+  db.prepare(
+    `
+    UPDATE documents SET
+      upazila_id = ?,
+      mouza_id = ?,
+      volume_id = ?,
+      khatian_no = ?,
+      dag_no = ?,
+      holding_no = ?,
+      doc_type = ?,
+      remarks = ?,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+    `
+  ).run(upazilaId, mouzaId, volumeId, khatianNo, dagNo, holdingNo, docType, remarks, id)
+
+  // Remove deleted files
+  const keepIds = existingFiles.map((f) => f.id)
+  const filesToDelete = db
+    .prepare(`SELECT * FROM document_files WHERE document_id = ?`)
+    .all(id)
+    .filter((f) => !keepIds.includes(f.id))
+
+  for (const f of filesToDelete) {
+    try {
+      if (fs.existsSync(f.file_path)) fs.unlinkSync(f.file_path)
+    } catch (err) {
+      console.error('Failed to delete file:', f.file_path, err)
+    }
+    db.prepare(`DELETE FROM document_files WHERE id = ?`).run(f.id)
+  }
+
+  // Add new files
+  const fileStmt = db.prepare(`
+    INSERT INTO document_files (document_id, file_name, file_path)
+    VALUES (?, ?, ?)
+  `)
+
+  for (const file of newFiles) {
+    const filename = `${Date.now()}-${file.name}`
+    const filePath = join(baseDir, filename)
+
+    fs.writeFileSync(filePath, Buffer.from(file.buffer))
+
+    fileStmt.run(id, file.name, filePath)
+  }
+
+  return { success: true }
+})
+
 ipcMain.handle('delete-document', async (event, documentId) => {
   const db = getDB()
 

@@ -1,7 +1,10 @@
 import { useEffect } from 'react'
-import { X, Trash2 } from 'lucide-react'
+import { X, SquarePen } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 export default function RecordInfoModal({ record = null, isOpen, onClose, onDelete }) {
+  const navigate = useNavigate()
+
   useEffect(() => {
     if (!isOpen) return
 
@@ -32,16 +35,12 @@ export default function RecordInfoModal({ record = null, isOpen, onClose, onDele
           <h2 className="text-lg font-semibold text-gray-900">Record Info ({record.id})</h2>
           <div className="flex gap-2">
             <button
-              className="p-2 rounded hover:bg-red-100 transition-colors"
+              className="p-2 rounded hover:bg-gray-100 transition-colors"
               onClick={() => {
-                if (confirm(`Delete record with record id ${record.id}?`)) {
-                  window.api.deleteDocument(record.id)
-                  onClose()
-                  onDelete()
-                }
+                navigate('/search/edit-document', { state: { documentId: record.id } })
               }}
             >
-              <Trash2 size={20} className="text-red-500" />
+              <SquarePen size={20} />
             </button>
             <button onClick={onClose} className="p-2 rounded hover:bg-gray-100 transition-colors">
               <X size={20} />
