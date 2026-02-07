@@ -45,7 +45,9 @@ export default function BackupModal({ isOpen, onClose }) {
       setPassword('')
       setError('')
       onClose()
-      alert('Backup completed successfully!')
+      setTimeout(() => {
+        alert('Backup completed successfully!')
+      })
     } catch (err) {
       setLoading(false)
       setError('Backup failed. See console for details.')
@@ -94,7 +96,7 @@ export default function BackupModal({ isOpen, onClose }) {
               <progress
                 value={progress.processed}
                 max={progress.total}
-                className="w-full h-2 rounded-lg overflow-hidden bg-gray-100 accent-emerald-500"
+                className="w-full h-2 rounded-lg overflow-hidden bg-gray-100"
               />
             </div>
           )}
