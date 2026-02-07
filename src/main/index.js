@@ -418,7 +418,7 @@ ipcMain.handle('start-backup', async (event, password = null) => {
   }
 
   try {
-    await backupFolder(sourceDir, filePath, password)
+    await backupFolder(sourceDir, filePath, password, event.sender)
     return { success: true, path: filePath }
   } catch (err) {
     console.error('Backup failed in main process:', err)

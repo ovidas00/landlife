@@ -5,7 +5,7 @@ export default function BackupModal({ isOpen, onClose }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [progress, setProgress] = useState({ files: 0, file: '' })
+  const [progress, setProgress] = useState({ processed: 0, total: 0, percent: 0 })
 
   useEffect(() => {
     if (!isOpen) return
@@ -40,6 +40,7 @@ export default function BackupModal({ isOpen, onClose }) {
     try {
       setLoading(true)
       await window.api.startBackup(pwd)
+      setProgress({ processed: 0, total: 0, percent: 0 })
       setLoading(false)
       setPassword('')
       setError('')
@@ -85,8 +86,17 @@ export default function BackupModal({ isOpen, onClose }) {
           </div>
 
           {loading && (
-            <div className="text-sm text-gray-700">
-              Backing up... {progress.files || 0} files processed. Current: {progress.file || 'N/A'}
+            <div className="space-y-2">
+              <div className="text-sm text-gray-700">
+                Backing up... {progress.processed || 0}/{progress.total || 0} files (
+                {progress.percent || 0}%)
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-emerald-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${progress.percent || 0}%` }}
+                />
+              </div>
             </div>
           )}
 

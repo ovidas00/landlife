@@ -23,7 +23,7 @@ export function getDocumentFolder() {
   return folder
 }
 
-export async function backupFolder(sourceDir, outputArchive, password = null) {
+export async function backupFolder(sourceDir, outputArchive, password = null, webContents) {
   return new Promise((resolve, reject) => {
     let bin
 
@@ -56,8 +56,26 @@ export async function backupFolder(sourceDir, outputArchive, password = null) {
 
     // Include the copied app.db
     items.push(tempDbPath)
+    let processedCount = 0
+    const totalFiles = items.length
 
     const archive = Seven.add(outputArchive, items, options)
+
+    archive.on('progress', () => {
+      processedCount++
+      const percent = ((processedCount / totalFiles) * 100).toFixed(1)
+      const progressData = {
+        percent: Number(percent),
+        processed: processedCount,
+        total: totalFiles
+      }
+
+      console.log(`Backup progress: ${percent}% (${processedCount}/${totalFiles} files)`)
+
+      if (webContents) {
+        webContents.send('backup-progress', progressData)
+      }
+    })
 
     archive.on('end', () => {
       console.log(`Backup complete! Archive saved at: ${outputArchive}`)
