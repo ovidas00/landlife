@@ -48,14 +48,29 @@ export async function backupFolder(sourceDir, outputArchive, password = null, we
     const tempDbPath = join(tempDir, 'app.db')
     fs.copyFileSync(dbPath, tempDbPath)
 
+    // Recursive function to get all files
+    function getAllFiles(dir, exclude = []) {
+      let results = []
+      const list = fs.readdirSync(dir)
+      for (const item of list) {
+        if (exclude.includes(item)) continue
+        const fullPath = join(dir, item)
+        const stat = fs.statSync(fullPath)
+        if (stat.isDirectory()) {
+          results = results.concat(getAllFiles(fullPath, exclude))
+        } else {
+          results.push(fullPath)
+        }
+      }
+      return results
+    }
+
     // Add all files in sourceDir except app.db
-    const items = fs
-      .readdirSync(sourceDir)
-      .filter((f) => f !== 'app.db')
-      .map((f) => join(sourceDir, f))
+    const items = getAllFiles(sourceDir, ['app.db'])
 
     // Include the copied app.db
     items.push(tempDbPath)
+
     let processedCount = 0
     const totalFiles = items.length
 
@@ -81,14 +96,14 @@ export async function backupFolder(sourceDir, outputArchive, password = null, we
       console.log(`Backup complete! Archive saved at: ${outputArchive}`)
       // Clean up temp DB
       fs.unlinkSync(tempDbPath)
-      fs.rmdirSync(tempDir)
+      fs.rmdirSync(tempDir, { recursive: true })
       resolve()
     })
 
     archive.on('error', (err) => {
       console.error('Backup failed:', err)
       if (fs.existsSync(tempDbPath)) fs.unlinkSync(tempDbPath)
-      if (fs.existsSync(tempDir)) fs.rmdirSync(tempDir)
+      if (fs.existsSync(tempDir)) fs.rmdirSync(tempDir, { recursive: true })
       reject(err)
     })
   })
