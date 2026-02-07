@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
+import { showSuccess } from '../utils/toast'
 
 export default function BackupModal({ isOpen, onClose }) {
   const [password, setPassword] = useState('')
@@ -45,9 +46,7 @@ export default function BackupModal({ isOpen, onClose }) {
       setPassword('')
       setError('')
       onClose()
-      setTimeout(() => {
-        alert('Backup completed successfully!')
-      })
+      showSuccess('Backup successful')
     } catch (err) {
       setLoading(false)
       setError('Backup failed. See console for details.')

@@ -1,5 +1,6 @@
 import { Upload, X, File } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
+import { showError, showSuccess } from '../utils/toast'
 
 export default function UploadDocument() {
   const [upazilas, setUpazilas] = useState([])
@@ -71,12 +72,12 @@ export default function UploadDocument() {
 
   const submitDocument = async () => {
     if (!selectedUpazila || !mouza || !volume) {
-      alert('Please select location')
+      showError('Please select location')
       return
     }
 
     if (!isNotFound && !files.length) {
-      alert('Please upload at least one document')
+      showError('Please upload at least one document')
       return
     }
 
@@ -97,7 +98,7 @@ export default function UploadDocument() {
     try {
       await window.api.uploadDocument(payload)
 
-      alert('Document uploaded successfully')
+      showSuccess('Document uploaded successfully')
 
       setKhatianNo('')
       setDagNo('')
@@ -107,7 +108,7 @@ export default function UploadDocument() {
       setFiles([])
     } catch (err) {
       console.error(err)
-      alert('Upload failed')
+      showError('Upload failed')
     }
 
     setLoading(false)

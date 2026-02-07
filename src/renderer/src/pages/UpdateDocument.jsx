@@ -2,6 +2,7 @@ import { Upload, X, File } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom' // assuming you use React Router
 import Breadcrumb from '../components/Breadcrumb'
+import { showError, showSuccess } from '../utils/toast'
 
 export default function UpdateDocument() {
   const location = useLocation()
@@ -45,7 +46,6 @@ export default function UpdateDocument() {
   const loadDocument = async () => {
     if (!documentId) return
     const doc = await window.api.getDocumentById(documentId)
-    if (!doc) return alert('Document not found')
 
     setSelectedUpazila(doc.upazila_id)
     setMouza(doc.mouza_id)
@@ -100,12 +100,12 @@ export default function UpdateDocument() {
 
   const submitDocument = async () => {
     if (!selectedUpazila || !mouza || !volume) {
-      alert('Please select location')
+      showError('Please select location')
       return
     }
 
     if (!isNotFound && !files.length && !existingFiles.length) {
-      alert('Please upload at least one document')
+      showError('Please upload at least one document')
       return
     }
 
@@ -127,10 +127,10 @@ export default function UpdateDocument() {
 
     try {
       await window.api.updateDocument(payload)
-      alert('Document updated successfully')
+      showSuccess('Document updated successfully')
     } catch (err) {
       console.error(err)
-      alert('Update failed')
+      showError('Update failed')
     }
 
     setLoading(false)
@@ -367,7 +367,7 @@ export default function UpdateDocument() {
                   <button
                     onClick={async () => {
                       if (deleteId !== documentId.toString()) {
-                        alert('Document ID does not match. Deletion cancelled.')
+                        showError('Document ID does not match. Deletion cancelled.')
                         return
                       }
 
@@ -380,11 +380,11 @@ export default function UpdateDocument() {
 
                       try {
                         await window.api.deleteDocument(documentId)
-                        alert('Document deleted successfully')
+                        showSuccess('Document deleted successfully')
                         navigate('/search')
                       } catch (err) {
                         console.error(err)
-                        alert('Failed to delete document')
+                        showError('Failed to delete document')
                       }
                     }}
                     className="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 font-bold"
