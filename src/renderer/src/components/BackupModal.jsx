@@ -86,17 +86,16 @@ export default function BackupModal({ isOpen, onClose }) {
           </div>
 
           {loading && (
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div className="text-sm text-gray-700">
                 Backing up... {progress.processed || 0}/{progress.total || 0} files (
                 {progress.percent || 0}%)
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-emerald-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${progress.percent || 0}%` }}
-                />
-              </div>
+              <progress
+                value={progress.processed}
+                max={progress.total}
+                className="w-full h-2 rounded-lg overflow-hidden bg-gray-100 accent-emerald-500"
+              />
             </div>
           )}
 
