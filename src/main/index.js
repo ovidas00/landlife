@@ -542,3 +542,40 @@ ipcMain.handle('start-backup', async (event, password = null) => {
     throw err
   }
 })
+
+ipcMain.handle('get-backup-state', async () => {
+  const db = getDB()
+
+  // Overall stats
+  const totalStats = db
+    .prepare(
+      `
+      SELECT 
+        (SELECT COUNT(*) FROM documents) AS documents,
+        (SELECT COUNT(*) FROM document_files) AS files
+    `
+    )
+    .get()
+
+  // Per-upazila stats
+  const upazilas = db
+    .prepare(
+      `
+      SELECT 
+        u.name,
+        COUNT(DISTINCT d.id) AS documents,
+        COUNT(f.id) AS files
+      FROM upazilas u
+      LEFT JOIN documents d ON d.upazila_id = u.id
+      LEFT JOIN document_files f ON f.document_id = d.id
+      GROUP BY u.id
+      ORDER BY u.name
+    `
+    )
+    .all()
+
+  return {
+    totalStats,
+    upazilas
+  }
+})

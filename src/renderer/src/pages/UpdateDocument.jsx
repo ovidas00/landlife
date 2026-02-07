@@ -387,7 +387,7 @@ export default function UpdateDocument() {
                     {/* Input for confirmation */}
                     <input
                       type="text"
-                      placeholder="Enter Document SL"
+                      placeholder="Enter Document Serial"
                       value={deleteId}
                       onChange={(e) => setDeleteId(e.target.value)}
                       className="w-full px-4 py-2 mb-4 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
@@ -396,7 +396,7 @@ export default function UpdateDocument() {
                     <button
                       onClick={async () => {
                         if (deleteId !== documentId.toString()) {
-                          showError('Document ID does not match. Deletion cancelled.')
+                          showError('Document serial does not match. Deletion cancelled.')
                           return
                         }
 

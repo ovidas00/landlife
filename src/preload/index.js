@@ -51,5 +51,6 @@ contextBridge.exposeInMainWorld('api', {
   startBackup: (sourceDir, outputArchive, password = null) =>
     ipcRenderer.invoke('start-backup', sourceDir, outputArchive, password),
   onBackupProgress: (callback) =>
-    ipcRenderer.on('backup-progress', (event, progress) => callback(progress))
+    ipcRenderer.on('backup-progress', (event, progress) => callback(progress)),
+  getBackupState: () => ipcRenderer.invoke('get-backup-state')
 })
