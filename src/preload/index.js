@@ -48,8 +48,9 @@ contextBridge.exposeInMainWorld('api', {
   getDashboardState: () => ipcRenderer.invoke('get-dashboard-state'),
   getReportState: (filters = {}) => ipcRenderer.invoke('get-report-state', filters),
 
-  startBackup: (sourceDir, outputArchive, password = null) =>
-    ipcRenderer.invoke('start-backup', sourceDir, outputArchive, password),
+  startBackup: (password = null) => ipcRenderer.invoke('start-backup', password),
+  startBackupRegional: (password = null, upazilaId) =>
+    ipcRenderer.invoke('start-backup-regional', { password, upazilaId }),
   onBackupProgress: (callback) =>
     ipcRenderer.on('backup-progress', (event, progress) => callback(progress)),
   getBackupState: () => ipcRenderer.invoke('get-backup-state')

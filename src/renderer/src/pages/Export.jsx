@@ -1,9 +1,12 @@
-import { Database, Download, FileText, Files, HardDrive } from 'lucide-react'
+import { Database, Download } from 'lucide-react'
 import BackupModal from '../components/BackupModal'
 import { useEffect, useState } from 'react'
+import BackupModalRegional from '../components/BackupModalRegional'
 
 export default function ExportPage() {
   const [backupOpen, setBackupOpen] = useState(false)
+  const [backupOpenRegional, setBackupOpenRegional] = useState(false)
+  const [selectedUpazilaId, setSelectedUpazilaId] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const [totalStats, setTotalStats] = useState({
@@ -32,6 +35,12 @@ export default function ExportPage() {
   return (
     <>
       <BackupModal isOpen={backupOpen} onClose={() => setBackupOpen(false)} />
+
+      <BackupModalRegional
+        isOpen={backupOpenRegional}
+        onClose={() => setBackupOpenRegional(false)}
+        upazilaId={selectedUpazilaId}
+      />
 
       <div className="bg-gray-100 p-8">
         <div className="max-w-6xl mx-auto">
@@ -123,6 +132,10 @@ export default function ExportPage() {
                             ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
                             : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                         }`}
+                        onClick={() => {
+                          setSelectedUpazilaId(upazila.id)
+                          setBackupOpenRegional(true)
+                        }}
                       >
                         <Download size={16} />
                         Backup

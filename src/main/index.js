@@ -4,7 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { getDB } from './db'
 import fs from 'node:fs'
-import { backupFolder, getDocumentFolder } from './utils'
+import { backupFolder, backupFolderRegional, getDocumentFolder } from './utils'
 
 function createWindow() {
   // Create the browser window.
@@ -543,6 +543,25 @@ ipcMain.handle('start-backup', async (event, password = null) => {
   }
 })
 
+ipcMain.handle('start-backup-regional', async (event, { password = null, upazilaId }) => {
+  const sourceDir = getDocumentFolder()
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    title: 'Save backup archive',
+    defaultPath: join(app.getPath('downloads'), `landlife-archive-${timestamp}.7z`),
+    filters: [{ name: '7zip Archive', extensions: ['7z'] }]
+  })
+
+  if (canceled || !filePath) {
+    return { success: false, canceled: true }
+  }
+
+  await backupFolderRegional(sourceDir, filePath, password, event.sender, upazilaId)
+
+  return { success: true, path: filePath }
+})
+
 ipcMain.handle('get-backup-state', async () => {
   const db = getDB()
 
@@ -562,6 +581,7 @@ ipcMain.handle('get-backup-state', async () => {
     .prepare(
       `
       SELECT 
+        u.id,
         u.name,
         COUNT(DISTINCT d.id) AS documents,
         COUNT(f.id) AS files

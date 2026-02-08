@@ -236,7 +236,7 @@ export default function Locations() {
                     Select Parent Upazila
                   </label>
                   <select
-                    value={selectedUpazila}
+                    value={selectedUpazila || ''}
                     onChange={(e) => setSelectedUpazila(e.target.value)}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
                   >
@@ -320,7 +320,7 @@ export default function Locations() {
                     Select Upazila
                   </label>
                   <select
-                    value={selectedUpazilaVolume}
+                    value={selectedUpazilaVolume || ''}
                     onChange={(e) => setSelectedUpazilaVolume(e.target.value)}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
                   >
