@@ -177,9 +177,20 @@ export default function Locations() {
                       className="px-6 py-2 bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800 transition-colors"
                       onClick={async () => {
                         if (upazila) {
-                          await window.api.addUpazila(upazila)
-                          loadUpazilas()
-                          setUpazila('')
+                          try {
+                            const result = await window.api.addUpazila(upazila)
+
+                            if (result?.success) {
+                              loadUpazilas()
+                              setUpazila('')
+                              showSuccess('Upazila added')
+                            } else {
+                              showError(result?.message || 'Failed to add upazila')
+                            }
+                          } catch (err) {
+                            console.error(err)
+                            showError('Failed to add upazila')
+                          }
                         }
                       }}
                     >
@@ -263,9 +274,20 @@ export default function Locations() {
                       className="px-6 py-2 bg-emerald-700 text-white rounded-lg"
                       onClick={async () => {
                         if (mouzaName && selectedUpazila) {
-                          await window.api.addMouza(mouzaName, selectedUpazila)
-                          setMouzaName('')
-                          loadMouzas(selectedUpazila)
+                          try {
+                            const result = await window.api.addMouza(mouzaName, selectedUpazila)
+
+                            if (result?.success) {
+                              setMouzaName('')
+                              loadMouzas(selectedUpazila)
+                              showSuccess('Mouza added')
+                            } else {
+                              showError(result?.message || 'Failed to add mouza')
+                            }
+                          } catch (err) {
+                            console.error(err)
+                            showError('Failed to add mouza')
+                          }
                         }
                       }}
                     >
@@ -348,10 +370,24 @@ export default function Locations() {
                     <button
                       className="px-6 py-2 bg-emerald-700 text-white rounded-lg"
                       onClick={async () => {
-                        if (volumeName && selectedUpazila) {
-                          await window.api.addVolume(volumeName, selectedUpazilaVolume)
-                          setVolumeName('')
-                          loadVolumes(selectedUpazilaVolume)
+                        if (volumeName && selectedUpazilaVolume) {
+                          try {
+                            const result = await window.api.addVolume(
+                              volumeName,
+                              selectedUpazilaVolume
+                            )
+
+                            if (result?.success) {
+                              setVolumeName('')
+                              loadVolumes(selectedUpazilaVolume)
+                              showSuccess('Volume added')
+                            } else {
+                              showError(result?.message || 'Failed to add volume')
+                            }
+                          } catch (err) {
+                            console.error(err)
+                            showError('Failed to add volume')
+                          }
                         }
                       }}
                     >

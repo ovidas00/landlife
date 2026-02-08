@@ -64,8 +64,17 @@ app.on('window-all-closed', () => {
 
 ipcMain.handle('add-upazilla', async (event, name) => {
   const db = getDB()
-  const stmt = db.prepare('INSERT INTO upazilas (name) VALUES (?)')
-  stmt.run(name)
+
+  const normalizedName = name.trim()
+  const exists = db
+    .prepare('SELECT 1 FROM upazilas WHERE lower(name) = lower(?)')
+    .get(normalizedName)
+
+  if (exists) {
+    return { success: false, message: 'Upazila already exists' }
+  }
+
+  db.prepare('INSERT INTO upazilas (name) VALUES (?)').run(normalizedName)
 
   return { success: true }
 })
@@ -87,7 +96,28 @@ ipcMain.handle('delete-upazila', (event, upazilaId) => {
 
 ipcMain.handle('add-mouza', (event, name, upazilaId) => {
   const db = getDB()
-  db.prepare('INSERT INTO mouzas (name, upazila_id) VALUES (?, ?)').run(name, upazilaId)
+
+  const normalizedName = name.trim()
+  const exists = db
+    .prepare(
+      `
+    SELECT 1
+    FROM mouzas
+    WHERE lower(name) = lower(?) AND upazila_id = ?
+  `
+    )
+    .get(normalizedName, upazilaId)
+
+  if (exists) {
+    return { success: false, message: 'Mouza already exists in this upazila' }
+  }
+
+  db.prepare(
+    `
+    INSERT INTO mouzas (name, upazila_id)
+    VALUES (?, ?)
+  `
+  ).run(normalizedName, upazilaId)
 
   return { success: true }
 })
@@ -106,7 +136,28 @@ ipcMain.handle('delete-mouza', (event, mouzaId) => {
 
 ipcMain.handle('add-volume', (event, name, upazilaId) => {
   const db = getDB()
-  db.prepare('INSERT INTO volumes (name, upazila_id) VALUES (?, ?)').run(name, upazilaId)
+
+  const normalizedName = name.trim()
+  const exists = db
+    .prepare(
+      `
+      SELECT 1
+      FROM volumes
+      WHERE lower(name) = lower(?) AND upazila_id = ?
+    `
+    )
+    .get(normalizedName, upazilaId)
+
+  if (exists) {
+    return { success: false, message: 'Volume already exists in this upazila' }
+  }
+
+  db.prepare(
+    `
+    INSERT INTO volumes (name, upazila_id)
+    VALUES (?, ?)
+  `
+  ).run(normalizedName, upazilaId)
 
   return { success: true }
 })
@@ -413,7 +464,8 @@ ipcMain.handle('delete-document', async (event, documentId) => {
 
 ipcMain.handle('open-file', async (event, filePath) => {
   if (!filePath) return
-  await shell.openPath(filePath) // opens PDF in default system app
+  const path = join(getDocumentFolder(), 'documents', filePath)
+  await shell.openPath(path) // opens PDF in default system app
 })
 
 ipcMain.handle('get-dashboard-state', async () => {
