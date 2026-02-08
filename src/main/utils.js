@@ -1,5 +1,5 @@
 import { app } from 'electron'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
 import fs from 'node:fs'
 import Seven from 'node-7z'
 import { path7za } from '7zip-bin'
@@ -7,20 +7,7 @@ import os from 'node:os'
 import Database from 'better-sqlite3'
 
 export function getDocumentFolder() {
-  let folder
-
-  if (process.platform === 'win32') {
-    folder = join(
-      process.env.LOCALAPPDATA || join(app.getPath('home'), 'AppData', 'Local'),
-      app.getName()
-    )
-  } else if (process.platform === 'darwin') {
-    folder = join(app.getPath('home'), 'Library', 'Application Support', app.getName())
-  } else {
-    folder = join(app.getPath('home'), '.local', 'share', app.getName())
-  }
-
-  if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true })
+  const folder = dirname(app.getPath('exe'))
   return folder
 }
 
