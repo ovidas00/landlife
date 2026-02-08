@@ -113,9 +113,9 @@ export default function ReportsPage() {
 
   const totalPages = Math.ceil(total / pageSize)
 
-  const exportRecords = () => {
-    console.log('Exporting records...', records)
-  }
+  // const exportRecords = () => {
+  //   console.log('Exporting records...', records)
+  // }
 
   return (
     <>
@@ -130,13 +130,13 @@ export default function ReportsPage() {
               <p className="text-gray-600">Generate and export land document reports instantly.</p>
             </div>
             {/* Export Button */}
-            <button
+            {/* <button
               onClick={exportRecords}
               className="inline-flex items-center gap-2 px-6 py-2 border-2 border-gray-300 text-gray-600 bg-white rounded-lg shadow hover:bg-gray-200 transition"
             >
               <Download size={16} />
               Export
-            </button>
+            </button> */}
           </div>
 
           {/* Filters */}
