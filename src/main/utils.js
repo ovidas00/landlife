@@ -49,31 +49,12 @@ export async function backupFolder(sourceDir, outputArchive, password = null, we
     const tempDbPath = join(tempDir, 'app.db')
     fs.copyFileSync(dbPath, tempDbPath)
 
-    // Recursive function to get all files
-    function getAllFiles(dir, exclude = []) {
-      let results = []
-      const list = fs.readdirSync(dir)
-      for (const item of list) {
-        if (exclude.includes(item)) continue
-        const fullPath = join(dir, item)
-        const stat = fs.statSync(fullPath)
-        if (stat.isDirectory()) {
-          results = results.concat(getAllFiles(fullPath, exclude))
-        } else {
-          results.push(fullPath)
-        }
-      }
-      return results
-    }
-
-    // Add all files in sourceDir except app.db
-    const items = getAllFiles(sourceDir, ['app.db'])
-
-    // Include the copied app.db
-    items.push(tempDbPath)
+    // Only include temp app.db and documents folder
+    const documentsPath = join(sourceDir, 'documents')
+    const items = [tempDbPath, documentsPath]
 
     let processedCount = 0
-    const totalFiles = items.length
+    const totalFiles = 1 + countFiles(documentsPath)
 
     const archive = Seven.add(outputArchive, items, options)
 
@@ -86,7 +67,7 @@ export async function backupFolder(sourceDir, outputArchive, password = null, we
         total: totalFiles
       }
 
-      console.log(`Backup progress: ${percent}% (${processedCount}/${totalFiles} files)`)
+      console.log(`Backup progress: ${percent}% (${processedCount}/${totalFiles} items)`)
 
       if (webContents) {
         webContents.send('backup-progress', progressData)
@@ -138,7 +119,6 @@ export async function backupFolderRegional(
     const dbPath = join(sourceDir, 'app.db')
     const tempDir = join(os.tmpdir(), `backup-temp-${Date.now()}`)
     fs.mkdirSync(tempDir, { recursive: true })
-
     const tempDbPath = join(tempDir, 'app.db')
     fs.copyFileSync(dbPath, tempDbPath)
 
@@ -146,66 +126,63 @@ export async function backupFolderRegional(
     const tempDb = new Database(tempDbPath)
     tempDb.pragma('foreign_keys = OFF')
 
-    // Atomic filtering transaction
     const tx = tempDb.transaction((upazilaId) => {
       tempDb.prepare(`DELETE FROM documents WHERE upazila_id != ?`).run(upazilaId)
       tempDb.prepare(`DELETE FROM mouzas WHERE upazila_id != ?`).run(upazilaId)
       tempDb.prepare(`DELETE FROM volumes WHERE upazila_id != ?`).run(upazilaId)
       tempDb.prepare(`DELETE FROM upazilas WHERE id != ?`).run(upazilaId)
-
       tempDb
         .prepare(
-          `
-    DELETE FROM document_files
-    WHERE document_id NOT IN (SELECT id FROM documents)
-  `
+          `DELETE FROM document_files 
+           WHERE document_id NOT IN (SELECT id FROM documents)`
         )
         .run()
     })
 
     tx(upazilaId)
 
-    // Integrity check
+    // --- Integrity check ---
     const check = tempDb.prepare('PRAGMA integrity_check').get()
     if (check.integrity_check !== 'ok') {
       tempDb.close()
       throw new Error('Filtered DB failed integrity check')
     }
 
-    // Optional: shrink DB file
     tempDb.exec('VACUUM')
-
-    // Re-enable FK for exported DB
     tempDb.pragma('foreign_keys = ON')
 
-    // Get remaining file paths AFTER cleanup
-    const rows = tempDb.prepare(`SELECT file_path FROM document_files`).all()
+    // --- Get only files for this upazila directly from DB ---
+    const rows = tempDb
+      .prepare(
+        `SELECT df.file_path 
+         FROM document_files df 
+         JOIN documents d ON df.document_id = d.id 
+         WHERE d.upazila_id = ?`
+      )
+      .all(upazilaId)
 
     tempDb.close()
 
+    // Only include files that actually exist
     const filesToInclude = rows.map((r) => r.file_path).filter((p) => fs.existsSync(p))
 
-    // Add filtered DB
+    // Include filtered DB at root
     filesToInclude.push(tempDbPath)
 
+    const totalFiles = countFilesList(filesToInclude)
     let processedCount = 0
-    const totalFiles = filesToInclude.length
 
     const archive = Seven.add(outputArchive, filesToInclude, options)
 
     archive.on('progress', () => {
       processedCount++
       const percent = ((processedCount / totalFiles) * 100).toFixed(1)
-
       const progressData = {
         percent: Number(percent),
         processed: processedCount,
         total: totalFiles
       }
-
-      if (webContents) {
-        webContents.send('backup-progress', progressData)
-      }
+      if (webContents) webContents.send('backup-progress', progressData)
     })
 
     archive.on('end', () => {
@@ -218,4 +195,34 @@ export async function backupFolderRegional(
       reject(err)
     })
   })
+}
+
+function countFiles(dir) {
+  let count = 0
+  const list = fs.readdirSync(dir)
+  for (const item of list) {
+    const fullPath = join(dir, item)
+    const stat = fs.statSync(fullPath)
+    if (stat.isDirectory()) {
+      count += countFiles(fullPath)
+    } else {
+      count++
+    }
+  }
+  return count
+}
+
+function countFilesList(files) {
+  let count = 0
+  for (const f of files) {
+    if (!fs.existsSync(f)) continue
+    const stat = fs.statSync(f)
+    if (stat.isDirectory()) {
+      // recursively count all files in the folder
+      count += countFilesList(fs.readdirSync(f).map((i) => join(f, i)))
+    } else {
+      count++
+    }
+  }
+  return count
 }

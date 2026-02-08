@@ -236,7 +236,7 @@ export default function ReportsPage() {
             <table className="w-full border-collapse">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left px-6 py-4 text-sm font-semibold">Serial</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold">SL</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold">Upazila / Mouza</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold">
                     Khatian / Holding / Dag
