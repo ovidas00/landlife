@@ -7,8 +7,30 @@ import os from 'node:os'
 import Database from 'better-sqlite3'
 
 export function getDocumentFolder() {
-  const folder = join(dirname(app.getPath('exe')), 'landdata')
-  if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true })
+  let folder
+
+  if (process.platform === 'win32') {
+    const exeFolder = join(dirname(app.getPath('exe')), 'landdata')
+
+    try {
+      fs.mkdirSync(exeFolder, { recursive: true })
+      folder = exeFolder
+    } catch {
+      folder = join(
+        process.env.LOCALAPPDATA || join(app.getPath('home'), 'AppData', 'Local'),
+        app.getName(),
+        'landdata'
+      )
+      if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true })
+    }
+  } else if (process.platform === 'darwin') {
+    folder = join(app.getPath('home'), 'Library', 'Application Support', app.getName())
+    if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true })
+  } else {
+    folder = join(app.getPath('home'), '.local', 'share', app.getName())
+    if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true })
+  }
+
   return folder
 }
 
