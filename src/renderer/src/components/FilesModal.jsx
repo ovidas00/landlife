@@ -54,7 +54,7 @@ export default function FilesModal({ files = [], isOpen, onClose }) {
                     <span className="text-gray-900">{file.file_name}</span>
                   </div>
                   <button
-                    onClick={() => handleOpenFile(file.file_name)}
+                    onClick={() => handleOpenFile(file.file_path)}
                     className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-600 text-white text-sm rounded hover:bg-emerald-700 transition-colors"
                   >
                     <ExternalLink size={14} />

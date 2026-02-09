@@ -43,7 +43,7 @@ contextBridge.exposeInMainWorld('api', {
     })
   },
   deleteDocument: (documentId) => ipcRenderer.invoke('delete-document', documentId),
-  openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
+  openFile: (fileUrl) => ipcRenderer.invoke('open-file', fileUrl),
 
   getDashboardState: () => ipcRenderer.invoke('get-dashboard-state'),
   getReportState: (filters = {}) => ipcRenderer.invoke('get-report-state', filters),
