@@ -5,7 +5,6 @@ import icon from '../../resources/icon.png?asset'
 import { getDB } from './db'
 import fs from 'node:fs'
 import { backupFolder, backupFolderRegional, getDocumentFolder } from './utils'
-import { fileURLToPath } from 'node:url'
 
 function createWindow() {
   // Create the browser window.
@@ -463,13 +462,10 @@ ipcMain.handle('delete-document', async (event, documentId) => {
   return { success: true }
 })
 
-ipcMain.handle('open-file', async (event, fileUrl) => {
-  if (!fileUrl) return
-
-  const fileName = basename(fileURLToPath(fileUrl))
-  const fullPath = join(getDocumentFolder(), 'documents', fileName)
-
-  await shell.openPath(fullPath)
+ipcMain.handle('open-file', async (event, filePath) => {
+  if (!filePath) return
+  const path = join(getDocumentFolder(), 'documents', basename(filePath))
+  await shell.openPath(path) // opens PDF in default system app
 })
 
 ipcMain.handle('get-dashboard-state', async () => {
