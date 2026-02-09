@@ -168,7 +168,7 @@ export default function Locations() {
                   <div className="flex gap-3">
                     <input
                       type="text"
-                      placeholder="e.g. Gazipur"
+                      placeholder="e.g. Khagrachari Sadar"
                       value={upazila}
                       onChange={(e) => setUpazila(e.target.value)}
                       className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
