@@ -7,7 +7,7 @@ import os from 'node:os'
 import Database from 'better-sqlite3'
 
 export function getDocumentFolder() {
-  const folder = dirname(app.getPath('exe'))
+  const folder = join(dirname(app.getPath('exe'), 'landdata'))
   return folder
 }
 
