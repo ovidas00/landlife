@@ -18,8 +18,7 @@ export function getDocumentFolder() {
     } catch {
       folder = join(
         process.env.LOCALAPPDATA || join(app.getPath('home'), 'AppData', 'Local'),
-        app.getName(),
-        'landdata'
+        app.getName()
       )
       if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true })
     }
