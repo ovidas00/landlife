@@ -2,6 +2,8 @@ appId: com.electron.app
 productName: LandLife
 compression: maximum
 removePackageScripts: true
+electronLanguages:
+  - en-US
 directories:
   buildResources: build
 files:
