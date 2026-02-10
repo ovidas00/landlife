@@ -1,5 +1,5 @@
 import { app } from 'electron'
-import { join, dirname } from 'node:path'
+import { join, parse } from 'node:path'
 import fs from 'node:fs'
 import Seven from 'node-7z'
 import { path7za } from '7zip-bin'
@@ -10,7 +10,7 @@ export function getDocumentFolder() {
   let folder
 
   if (process.platform === 'win32') {
-    const exeFolder = join(dirname(app.getPath('exe')), 'landdata')
+    const exeFolder = join(parse(app.getPath('exe')).root, 'LandLifeFiles')
 
     try {
       fs.mkdirSync(exeFolder, { recursive: true })
