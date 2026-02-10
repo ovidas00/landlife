@@ -13,6 +13,23 @@ files:
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+
+  # remove Windows binaries
+  - '!**/node_modules/**/win/x64/**'
+  - '!**/node_modules/**/win/ia32/**'
+  - '!**/node_modules/**/win/arm64/**'
+
+  # remove macOS binaries
+  - '!**/node_modules/**/darwin/**'
+  - '!**/node_modules/**/*.dylib'
+  - '!**/node_modules/**/mac/**'
+  - '!**/node_modules/**/osx/**'
+
+  # # remove Linux binaries
+  # - '!**/node_modules/**/linux/**'
+  # - '!**/node_modules/**/*.so'
+
+# Windows build
 win:
   target:
     - nsis
@@ -24,6 +41,8 @@ nsis:
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+
+# Mac build
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
@@ -34,13 +53,14 @@ mac:
   notarize: false
 dmg:
   artifactName: ${name}-${version}.${ext}
+
+# Linux build
 linux:
   target:
     - deb
-  maintainer: electronjs.org
+  maintainer: https://edulife.agency
   category: Utility
-appImage:
-  artifactName: ${name}-${version}.${ext}
+
 npmRebuild: false
 publish:
   provider: generic
