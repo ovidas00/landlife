@@ -326,7 +326,7 @@ export default function RecordsSearch() {
                       <td className="px-6 py-5">
                         {record.doc_type ? (
                           <span
-                            className={`inline-block px-2 py-1 rounded text-sm font-medium ${docTypeColors[record.doc_type]}`}
+                            className={`inline-block px-2 py-1 rounded text-sm font-medium whitespace-nowrap ${docTypeColors[record.doc_type]}`}
                           >
                             {docTypeLabels[record.doc_type]}
                           </span>
