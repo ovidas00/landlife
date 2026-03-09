@@ -27,7 +27,7 @@ export default function ConfirmModal({
       onClick={onCancel} // clicking outside closes modal
     >
       <div
-        className="bg-white rounded-xl shadow-lg w-full max-w-md p-6"
+        className="bg-white rounded shadow-lg w-full max-w-md p-6"
         onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside
       >
         {/* Header */}
@@ -42,7 +42,7 @@ export default function ConfirmModal({
         <p className="text-gray-700 mb-6">{message}</p>
 
         {/* Actions */}
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-3 font-medium">
           <button
             onClick={onCancel}
             className="px-4 py-2 rounded bg-gray-200 text-gray-900 hover:bg-gray-300 transition-colors"

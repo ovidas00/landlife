@@ -162,7 +162,7 @@ export default function RecordsSearch() {
           </div>
 
           {/* Filters */}
-          <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden mb-6">
+          <div className="bg-white border-2 border-gray-200 shadow-xs overflow-hidden mb-6">
             <div className="h-1 bg-emerald-700"></div>
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -174,7 +174,7 @@ export default function RecordsSearch() {
                   <select
                     value={selectedUpazila}
                     onChange={(e) => setSelectedUpazila(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   >
                     <option value="">All Upazilas</option>
                     {upazilas.map((u) => (
@@ -193,7 +193,7 @@ export default function RecordsSearch() {
                   <select
                     value={selectedMouza}
                     onChange={(e) => setSelectedMouza(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   >
                     <option value="">All Mouzas</option>
                     {mouzas.map((m) => (
@@ -212,7 +212,7 @@ export default function RecordsSearch() {
                   <select
                     value={selectedVolume}
                     onChange={(e) => setSelectedVolume(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   >
                     <option value="">All Volumes</option>
                     {volumes.map((v) => (
@@ -231,7 +231,7 @@ export default function RecordsSearch() {
                   <select
                     value={selectedDocType}
                     onChange={(e) => setSelectedDocType(e.target.value)}
-                    className="w-full px-4 py-2.5 border whitespace-nowrap border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                    className="w-full px-4 py-2.5 border whitespace-nowrap border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   >
                     <option value="">All Type</option>
                     <option value="usable">Usable Records</option>
@@ -256,7 +256,7 @@ export default function RecordsSearch() {
                       placeholder="Khatian, Holding or Dag..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -265,19 +265,19 @@ export default function RecordsSearch() {
           </div>
 
           {/* Results Table */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="bg-white border border-gray-200 shadow-xs overflow-hidden">
             <table className="w-full border-collapse">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left px-6 py-4 text-sm font-semibold">SL</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold">#</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold">Upazila / Mouza</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold">
-                    Khatian / Holding / Dag
+                    Khatian / Holding / Plot
                   </th>
                   <th className="text-left px-6 py-4 text-sm font-semibold">Volume</th>
                   {/* New column */}
                   <th className="text-left px-6 py-4 text-sm font-semibold">Record Type</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold">Remarks</th>
+                  {/* <th className="text-left px-6 py-4 text-sm font-semibold">Remarks</th> */}
                   <th className="text-right px-6 py-4 text-sm font-semibold">Files & Action</th>
                 </tr>
               </thead>
@@ -309,7 +309,7 @@ export default function RecordsSearch() {
                               )}
                               {record.dag && (
                                 <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
-                                  <span className="font-medium text-gray-600">D:</span>
+                                  <span className="font-medium text-gray-600">P:</span>
                                   {record.dag}
                                 </div>
                               )}
@@ -326,7 +326,7 @@ export default function RecordsSearch() {
                       <td className="px-6 py-5">
                         {record.doc_type ? (
                           <span
-                            className={`inline-block px-2 py-1 rounded text-sm font-medium whitespace-nowrap ${docTypeColors[record.doc_type]}`}
+                            className={`inline-block px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${docTypeColors[record.doc_type]}`}
                           >
                             {docTypeLabels[record.doc_type]}
                           </span>
@@ -334,18 +334,18 @@ export default function RecordsSearch() {
                           '—'
                         )}
                       </td>
-                      <td className="px-6 py-5">
+                      {/* <td className="px-6 py-5">
                         {record.remarks ? (
                           <span className="text-sm">{record.remarks}</span>
                         ) : (
                           <span className="text-sm text-gray-400">N/A</span>
                         )}
-                      </td>
+                      </td> */}
                       <td className="px-6 py-3 gap-2">
                         {/* Files button */}
                         <div className="flex gap-2 items-center justify-end">
                           <button
-                            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm whitespace-nowrap"
+                            className="inline-flex items-center gap-2 px-2 py-2 border border-gray-300 rounded text-sm whitespace-nowrap"
                             onClick={() => {
                               setCurrentFiles(record.files)
                               setModalOpen(true)
@@ -356,7 +356,7 @@ export default function RecordsSearch() {
                           </button>
                           {/* Info icon button */}
                           <button
-                            className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+                            className="p-2 border border-gray-300 rounded hover:bg-gray-100"
                             onClick={() => {
                               setSelectedRecord(record)
                               setInfoModalOpen(true)
@@ -370,7 +370,7 @@ export default function RecordsSearch() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="text-center py-8 text-gray-500">
+                    <td colSpan={6} className="text-center py-8 text-gray-500">
                       {loading ? 'Loading records...' : 'No records found!'}
                     </td>
                   </tr>
@@ -380,9 +380,9 @@ export default function RecordsSearch() {
 
             {/* Pagination Controls */}
             {!loading && totalPages > 1 && (
-              <div className="flex justify-end items-center gap-2 p-4 border-t border-gray-200">
+              <div className="flex justify-end items-center gap-2 p-4 border-gray-200">
                 <button
-                  className="p-2 border rounded-lg disabled:opacity-50"
+                  className="p-2 rounded-full bg-gray-200 disabled:opacity-50"
                   disabled={page === 1}
                   onClick={() => setPage(page - 1)}
                 >
@@ -392,7 +392,7 @@ export default function RecordsSearch() {
                   Page {page} of {totalPages}
                 </span>
                 <button
-                  className="p-2 border rounded-lg disabled:opacity-50"
+                  className="p-2 rounded-full bg-gray-200 disabled:opacity-50"
                   disabled={page === totalPages}
                   onClick={() => setPage(page + 1)}
                 >

@@ -178,7 +178,7 @@ export default function UpdateDocument() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* LEFT */}
             <div className="space-y-6">
-              <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
+              <div className="bg-white border-2 border-gray-200 shadow-xs overflow-hidden">
                 <div className="h-1 bg-emerald-700"></div>
 
                 <div className="p-6 space-y-4">
@@ -189,7 +189,7 @@ export default function UpdateDocument() {
                     <select
                       value={selectedUpazila}
                       onChange={(e) => setSelectedUpazila(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     >
                       <option value="">Select Upazila</option>
                       {upazilas.map((u) => (
@@ -205,7 +205,7 @@ export default function UpdateDocument() {
                     <select
                       value={mouza}
                       onChange={(e) => setMouza(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     >
                       <option value="">Select Mouza</option>
                       {mouzas.map((m) => (
@@ -221,7 +221,7 @@ export default function UpdateDocument() {
                     <select
                       value={volume}
                       onChange={(e) => setVolume(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     >
                       <option value="">Select Volume</option>
                       {volumes.map((v) => (
@@ -234,7 +234,7 @@ export default function UpdateDocument() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
+              <div className="bg-white border-2 border-gray-200 shadow-xs overflow-hidden">
                 <div className="h-1 bg-emerald-700"></div>
 
                 <div className="p-6 space-y-4">
@@ -248,7 +248,7 @@ export default function UpdateDocument() {
                         placeholder="Enter Khatian"
                         value={khatianNo}
                         onChange={(e) => setKhatianNo(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
                       />
                     </div>
 
@@ -259,7 +259,7 @@ export default function UpdateDocument() {
                         placeholder="Enter Holding"
                         value={holdingNo}
                         onChange={(e) => setHoldingNo(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
                       />
                     </div>
 
@@ -270,7 +270,7 @@ export default function UpdateDocument() {
                         placeholder="Enter Dag"
                         value={dagNo}
                         onChange={(e) => setDagNo(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
                       />
                     </div>
                   </div>
@@ -280,7 +280,7 @@ export default function UpdateDocument() {
                     <select
                       value={docType}
                       onChange={(e) => setDocType(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     >
                       <option value="usable">Usable Records</option>
                       <option value="unusable">Unusable Records</option>
@@ -296,7 +296,7 @@ export default function UpdateDocument() {
                       placeholder="Enter Extra Info"
                       value={remarks}
                       onChange={(e) => setRemarks(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     />
                   </div>
                 </div>
@@ -304,7 +304,7 @@ export default function UpdateDocument() {
             </div>
 
             {/* RIGHT */}
-            <div className="bg-white rounded-xl shadow-sm border-2 border-gray-200 overflow-hidden">
+            <div className="bg-white shadow-xs border-2 border-gray-200 overflow-hidden">
               <div className="bg-emerald-700 h-1"></div>
 
               <div className="p-6">
@@ -370,7 +370,7 @@ export default function UpdateDocument() {
                 <button
                   onClick={submitDocument}
                   disabled={loading}
-                  className="mt-6 w-full bg-emerald-700 text-white py-3 rounded-lg hover:bg-emerald-800 disabled:opacity-50 font-bold"
+                  className="mt-6 w-full bg-emerald-700 text-white py-3 rounded hover:bg-emerald-800 disabled:opacity-50 font-bold"
                 >
                   {loading ? 'Updating...' : 'Update Document'}
                 </button>
@@ -390,7 +390,7 @@ export default function UpdateDocument() {
                       placeholder="Enter Document Serial"
                       value={deleteId}
                       onChange={(e) => setDeleteId(e.target.value)}
-                      className="w-full px-4 py-2 mb-4 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-full px-4 py-2 mb-4 border border-red-300 rounded focus:outline-none focus:ring-2 focus:ring-red-500"
                     />
 
                     <button
@@ -402,7 +402,7 @@ export default function UpdateDocument() {
 
                         setConfirmOpen(true)
                       }}
-                      className="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 font-bold"
+                      className="w-full bg-red-600 text-white py-3 rounded hover:bg-red-700 font-bold"
                     >
                       Delete Document
                     </button>

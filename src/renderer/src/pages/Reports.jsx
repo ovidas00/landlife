@@ -1,7 +1,8 @@
-import { FileText, ChevronLeft, ChevronRight, Download } from 'lucide-react'
+import { FileText, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import FilesModal from '../components/FilesModal'
 import ReportStats from '../components/ReportStats'
+import RecordInfoModal from '../components/InfoModal'
 
 export default function ReportsPage() {
   const [upazilas, setUpazilas] = useState([])
@@ -15,6 +16,8 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [currentFiles, setCurrentFiles] = useState([])
+  const [selectedRecord, setSelectedRecord] = useState(null)
+  const [infoModalOpen, setInfoModalOpen] = useState(false)
 
   // Pagination state
   const [page, setPage] = useState(1)
@@ -84,7 +87,9 @@ export default function ReportsPage() {
         holding: doc.holding_no,
         owner: doc.owners?.join(', ') || '—',
         fileCount: doc.files?.length || 0,
-        files: doc.files
+        files: doc.files,
+        created_at: doc.created_at,
+        updated_at: doc.updated_at
       }))
 
       setRecords(formatted)
@@ -121,6 +126,15 @@ export default function ReportsPage() {
     <>
       <FilesModal files={currentFiles} isOpen={modalOpen} onClose={() => setModalOpen(false)} />
 
+      <RecordInfoModal
+        record={selectedRecord}
+        isOpen={infoModalOpen}
+        onClose={() => setInfoModalOpen(false)}
+        onDelete={() => {
+          loadDocuments()
+        }}
+      />
+
       <div className="bg-gray-100 p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
@@ -140,7 +154,7 @@ export default function ReportsPage() {
           </div>
 
           {/* Filters */}
-          <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden mb-6">
+          <div className="bg-white border-2 border-gray-200 shadow-xs overflow-hidden mb-6">
             <div className="h-1 bg-emerald-700"></div>
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -152,7 +166,7 @@ export default function ReportsPage() {
                   <select
                     value={selectedUpazila}
                     onChange={(e) => setSelectedUpazila(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   >
                     <option value="">All Upazilas</option>
                     {upazilas.map((u) => (
@@ -171,7 +185,7 @@ export default function ReportsPage() {
                   <select
                     value={selectedMouza}
                     onChange={(e) => setSelectedMouza(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   >
                     <option value="">All Mouzas</option>
                     {mouzas.map((m) => (
@@ -190,7 +204,7 @@ export default function ReportsPage() {
                   <select
                     value={selectedVolume}
                     onChange={(e) => setSelectedVolume(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   >
                     <option value="">All Volumes</option>
                     {volumes.map((v) => (
@@ -209,7 +223,7 @@ export default function ReportsPage() {
                   <select
                     value={selectedDocType}
                     onChange={(e) => setSelectedDocType(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   >
                     <option value="">All Types</option>
                     <option value="usable">Usable Records</option>
@@ -232,20 +246,20 @@ export default function ReportsPage() {
           />
 
           {/* Results Table */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="bg-white border border-gray-200 shadow-sm overflow-hidden">
             <table className="w-full border-collapse">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left px-6 py-4 text-sm font-semibold">SL</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold">#</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold">Upazila / Mouza</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold">
-                    Khatian / Holding / Dag
+                    Khatian / Holding / Plot
                   </th>
                   <th className="text-left px-6 py-4 text-sm font-semibold">Volume</th>
                   {/* New column */}
                   <th className="text-left px-6 py-4 text-sm font-semibold">Record Type</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold">Remarks</th>
-                  <th className="text-right px-6 py-4 text-sm font-semibold">Files</th>
+                  {/* <th className="text-left px-6 py-4 text-sm font-semibold">Remarks</th> */}
+                  <th className="text-right px-6 py-4 text-sm font-semibold">Files & Action</th>
                 </tr>
               </thead>
 
@@ -276,7 +290,7 @@ export default function ReportsPage() {
                               )}
                               {record.dag && (
                                 <div className="inline-flex gap-2 px-2.5 py-1 bg-gray-100 rounded text-sm">
-                                  <span className="font-medium text-gray-600">D:</span>
+                                  <span className="font-medium text-gray-600">P:</span>
                                   {record.dag}
                                 </div>
                               )}
@@ -293,7 +307,7 @@ export default function ReportsPage() {
                       <td className="px-6 py-5">
                         {record.doc_type ? (
                           <span
-                            className={`inline-block px-2 py-1 rounded text-sm font-medium whitespace-nowrap ${docTypeColors[record.doc_type]}`}
+                            className={`inline-block px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${docTypeColors[record.doc_type]}`}
                           >
                             {docTypeLabels[record.doc_type]}
                           </span>
@@ -301,17 +315,17 @@ export default function ReportsPage() {
                           '—'
                         )}
                       </td>
-                      <td className="px-6 py-5">
+                      {/* <td className="px-6 py-5">
                         {record.remarks ? (
                           <span className="text-sm">{record.remarks}</span>
                         ) : (
                           <span className="text-sm text-gray-400">N/A</span>
                         )}
-                      </td>
-                      <td className="px-6 py-3">
-                        <div className="flex items-center justify-end">
+                      </td> */}
+                      <td className="px-6 py-3 gap-2">
+                        <div className="flex gap-2 items-center justify-end">
                           <button
-                            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm whitespace-nowrap"
+                            className="inline-flex items-center gap-2 px-2 py-2 border border-gray-300 rounded text-sm whitespace-nowrap"
                             onClick={() => {
                               setCurrentFiles(record.files)
                               setModalOpen(true)
@@ -320,13 +334,23 @@ export default function ReportsPage() {
                             <FileText size={16} />
                             Files ({record.fileCount})
                           </button>
+
+                          <button
+                            className="p-2 border border-gray-300 rounded hover:bg-gray-100"
+                            onClick={() => {
+                              setSelectedRecord(record)
+                              setInfoModalOpen(true)
+                            }}
+                          >
+                            <Info size={16} />
+                          </button>
                         </div>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="text-center py-8 text-gray-500">
+                    <td colSpan={6} className="text-center py-8 text-gray-500">
                       {loading ? 'Loading records...' : 'No records found!'}
                     </td>
                   </tr>
@@ -336,9 +360,9 @@ export default function ReportsPage() {
 
             {/* Pagination Controls */}
             {!loading && totalPages > 1 && (
-              <div className="flex justify-end items-center gap-2 p-4 border-t border-gray-200">
+              <div className="flex justify-end items-center gap-2 p-4 border-gray-200">
                 <button
-                  className="p-2 border rounded-lg disabled:opacity-50"
+                  className="p-2 rounded-full bg-gray-200 disabled:opacity-50"
                   disabled={page === 1}
                   onClick={() => setPage(page - 1)}
                 >
@@ -348,7 +372,7 @@ export default function ReportsPage() {
                   Page {page} of {totalPages}
                 </span>
                 <button
-                  className="p-2 border rounded-lg disabled:opacity-50"
+                  className="p-2 rounded-full bg-gray-200 disabled:opacity-50"
                   disabled={page === totalPages}
                   onClick={() => setPage(page + 1)}
                 >

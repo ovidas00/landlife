@@ -53,11 +53,11 @@ export default function ExportPage() {
           </div>
 
           {/* Full Backup Section */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+          <div className="bg-white rounded shadow-xs border border-gray-200 mb-6">
             <div className="p-5 flex items-center justify-between gap-6">
               {/* Left */}
               <div className="flex items-center gap-4 flex-1">
-                <div className="w-9 h-9 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <div className="w-9 h-9 bg-emerald-100 rounded flex items-center justify-center">
                   <Database size={18} className="text-emerald-700" />
                 </div>
 
@@ -89,7 +89,7 @@ export default function ExportPage() {
               {/* Button */}
               <button
                 onClick={() => setBackupOpen(true)}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded text-sm font-medium flex items-center gap-2"
               >
                 <Download size={16} />
                 Backup
@@ -107,7 +107,7 @@ export default function ExportPage() {
                 const hasData = upazila.documents > 0 || upazila.files > 0
 
                 return (
-                  <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200">
+                  <div key={index} className="bg-white rounded shadow-xs border border-gray-200">
                     <div className="p-6 flex items-center justify-between">
                       <div className="flex items-center gap-6 flex-1">
                         <h3
@@ -127,7 +127,7 @@ export default function ExportPage() {
 
                       <button
                         disabled={!hasData}
-                        className={`px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 ${
+                        className={`px-4 py-2 rounded font-medium text-sm flex items-center gap-2 ${
                           hasData
                             ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
                             : 'bg-gray-100 text-gray-400 cursor-not-allowed'

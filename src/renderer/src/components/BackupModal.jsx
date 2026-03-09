@@ -60,7 +60,7 @@ export default function BackupModal({ isOpen, onClose }) {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-xl shadow-lg w-full max-w-md p-6"
+        className="bg-white rounded shadow-lg w-full max-w-md p-6"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -77,7 +77,7 @@ export default function BackupModal({ isOpen, onClose }) {
             <label className="block font-medium text-gray-700 mb-1">Password (optional)</label>
             <input
               type="password"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
               placeholder="Enter password (min 6 chars)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -95,22 +95,22 @@ export default function BackupModal({ isOpen, onClose }) {
               <progress
                 value={progress.processed}
                 max={progress.total}
-                className="w-full h-2 rounded-lg overflow-hidden bg-gray-100"
+                className="w-full h-2 rounded overflow-hidden bg-gray-100"
               />
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 font-medium">
             <button
-              className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+              className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200"
               onClick={onClose}
               disabled={loading}
             >
               Cancel
             </button>
             <button
-              className="px-6 py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800"
+              className="px-6 py-2 bg-emerald-700 text-white rounded hover:bg-emerald-800"
               onClick={handleStartBackup}
               disabled={loading}
             >

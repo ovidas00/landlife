@@ -26,7 +26,7 @@ export default function RecordInfoModal({ record = null, isOpen, onClose, onDele
       onClick={onClose} // clicking on backdrop closes modal
     >
       <div
-        className="bg-white rounded-xl shadow-lg w-full max-w-2xl overflow-hidden"
+        className="bg-white rounded shadow-lg w-full max-w-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside modal
       >
         {/* Header */}
@@ -72,7 +72,7 @@ export default function RecordInfoModal({ record = null, isOpen, onClose, onDele
               <span className="text-gray-900">{record.khatian}</span>
             </div>
             <div>
-              <span className="font-medium text-gray-700">Dag:</span>{' '}
+              <span className="font-medium text-gray-700">Plot:</span>{' '}
               <span className="text-gray-900">{record.dag}</span>
             </div>
             <div>

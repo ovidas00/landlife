@@ -27,7 +27,7 @@ export default function FilesModal({ files = [], isOpen, onClose }) {
       onClick={onClose} // clicking on backdrop closes modal
     >
       <div
-        className="bg-white rounded-xl shadow-lg w-full max-w-2xl overflow-hidden"
+        className="bg-white rounded shadow-lg w-full max-w-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside modal
       >
         {/* Header */}
@@ -47,10 +47,10 @@ export default function FilesModal({ files = [], isOpen, onClose }) {
               {files.map((file) => (
                 <li
                   key={file.id}
-                  className="flex items-center justify-between border border-gray-200 rounded-lg px-4 py-2 hover:bg-gray-50 transition-colors"
+                  className="flex items-center justify-between border border-gray-200 rounded px-4 py-2 gap-3 hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex items-center gap-2">
-                    <FileText size={16} className="text-gray-700" />
+                  <div className="flex items-center gap-3">
+                    <FileText size={16} className="text-gray-700 flex-shrink-0" />
                     <span className="text-gray-900">{file.file_name}</span>
                   </div>
                   <button

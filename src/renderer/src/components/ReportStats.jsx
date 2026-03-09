@@ -77,11 +77,9 @@ export default function ReportStats({ filters = {} }) {
         return (
           <div
             key={index}
-            className={`bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden p-3 flex items-center gap-3`}
+            className={`bg-white rounded border border-gray-300 shadow-xs overflow-hidden p-3 flex items-center gap-3`}
           >
-            <div
-              className={`w-10 h-10 ${stat.bgColor} rounded-lg flex items-center justify-center`}
-            >
+            <div className={`w-10 h-10 ${stat.bgColor} rounded flex items-center justify-center`}>
               <Icon size={18} className={stat.iconColor} />
             </div>
             <div>

@@ -40,7 +40,7 @@ export default function Layout({ children }) {
               <img src={logo} alt="logo" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">Edulife</h1>
+              <h1 className="text-lg font-bold text-gray-900">LandLife</h1>
               <p className="text-xs text-gray-500">Document System</p>
             </div>
           </div>
@@ -54,7 +54,7 @@ export default function Layout({ children }) {
               <Link
                 key={link.to}
                 to={link.to}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors
+                className={`flex items-center gap-3 px-4 py-2.5 rounded transition-colors
                   ${isActive ? 'bg-emerald-700 text-white font-medium' : 'font-medium text-gray-700 hover:bg-gray-100'}
                 `}
               >
@@ -85,7 +85,7 @@ export default function Layout({ children }) {
                     <Link
                       key={link.to}
                       to={link.to}
-                      className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors
+                      className={`flex items-center gap-3 px-4 py-2.5 rounded transition-colors
                         ${isActive ? 'bg-emerald-700 text-white font-medium' : 'text-gray-700 hover:bg-gray-100'}
                       `}
                     >
@@ -100,8 +100,18 @@ export default function Layout({ children }) {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200">
-          <p className="text-xs text-gray-500">Version 1.0 • Secure Storage</p>
+        <div className="p-4 border-t border-gray-200 text-center">
+          <p className="text-xs text-gray-500">
+            Developed by{' '}
+            <a
+              href="https://edulife.agency"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-gray-700"
+            >
+              Edulife Agency
+            </a>
+          </p>
         </div>
       </aside>
 

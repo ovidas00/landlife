@@ -477,7 +477,7 @@ ipcMain.handle('get-dashboard-state', async () => {
   // Total upazilas
   const totalUpazilas = db.prepare(`SELECT COUNT(*) AS count FROM upazilas`).get().count
 
-  // Document count by type
+  // Document count by type (global)
   const docTypeCounts = db
     .prepare(
       `
@@ -491,11 +491,21 @@ ipcMain.handle('get-dashboard-state', async () => {
     )
     .get()
 
-  // Document count by upazila
+  // Dashboard stats by upazila
   const docsByUpazila = db
     .prepare(
       `
-      SELECT u.name AS upazila, COUNT(d.id) AS documentCount
+      SELECT
+        u.id,
+        u.name AS upazila,
+
+        COUNT(d.id) AS totalDocuments,
+
+        SUM(CASE WHEN d.doc_type = 'usable' THEN 1 ELSE 0 END) AS usableRecords,
+        SUM(CASE WHEN d.doc_type = 'unusable' THEN 1 ELSE 0 END) AS unusableRecords,
+        SUM(CASE WHEN d.doc_type = 'moderate' THEN 1 ELSE 0 END) AS moderateRecords,
+        SUM(CASE WHEN d.doc_type = 'not_found' THEN 1 ELSE 0 END) AS notFoundRecords
+
       FROM upazilas u
       LEFT JOIN documents d ON d.upazila_id = u.id
       GROUP BY u.id
