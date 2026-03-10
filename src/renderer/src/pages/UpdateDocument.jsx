@@ -264,10 +264,10 @@ export default function UpdateDocument() {
                     </div>
 
                     <div>
-                      <label className="block mb-2 font-medium">Dag No</label>
+                      <label className="block mb-2 font-medium">Plot No</label>
                       <input
                         type="text"
-                        placeholder="Enter Dag"
+                        placeholder="Enter Plot"
                         value={dagNo}
                         onChange={(e) => setDagNo(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"

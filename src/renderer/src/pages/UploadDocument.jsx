@@ -215,10 +215,10 @@ export default function UploadDocument() {
                   </div>
 
                   <div>
-                    <label className="block mb-2 font-medium">Dag No</label>
+                    <label className="block mb-2 font-medium">Plot No</label>
                     <input
                       type="text"
-                      placeholder="Enter Dag"
+                      placeholder="Enter Plot"
                       value={dagNo}
                       onChange={(e) => setDagNo(e.target.value)}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
@@ -266,7 +266,7 @@ export default function UploadDocument() {
                 onClick={() => !isNotFound && fileInputRef.current.click()}
                 onDrop={onDrop}
                 onDragOver={(e) => e.preventDefault()}
-                className={`border-2 border-dashed p-12 text-center border-gray-300 transition
+                className={`border-2 rounded border-dashed p-12 text-center border-gray-300 transition
                   ${isNotFound ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-emerald-50'}`}
               >
                 <Upload size={28} className="mx-auto text-gray-500" />
