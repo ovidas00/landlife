@@ -251,31 +251,26 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
   const conditions = []
   const params = []
 
-  // Upazila filter
   if (upazilaId) {
     conditions.push('d.upazila_id = ?')
     params.push(upazilaId)
   }
 
-  // Mouza filter
   if (mouzaId) {
     conditions.push('d.mouza_id = ?')
     params.push(mouzaId)
   }
 
-  // Volume filter
   if (volumeId) {
     conditions.push('d.volume_id = ?')
     params.push(volumeId)
   }
 
-  // Document type filter
   if (docType) {
     conditions.push('d.doc_type = ?')
     params.push(docType)
   }
 
-  // Search filter
   if (searchQuery) {
     const q = `%${searchQuery.toLowerCase()}%`
     conditions.push(`
@@ -290,7 +285,6 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
-  // Fetch documents with pagination
   const documents = db
     .prepare(
       `
@@ -309,7 +303,24 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
       u.name AS upazilaName,
       m.name AS mouzaName,
       v.name AS volumeName,
+
+      (
+        WITH RECURSIVE tree(id) AS (
+          SELECT id
+          FROM documents
+          WHERE parent_document_id = d.id
+
+          UNION ALL
+
+          SELECT d2.id
+          FROM documents d2
+          JOIN tree t ON d2.parent_document_id = t.id
+        )
+        SELECT COUNT(*) FROM tree
+      ) AS relation_count,
+
       COALESCE(f.files, '') AS files
+
     FROM documents d
     LEFT JOIN upazilas u ON d.upazila_id = u.id
     LEFT JOIN mouzas m ON d.mouza_id = m.id
@@ -320,14 +331,15 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
       FROM document_files
       GROUP BY document_id
     ) f ON f.document_id = d.id
+
     ${whereClause}
+
     ORDER BY d.id DESC
     LIMIT ? OFFSET ?
   `
     )
     .all(...params, pageSize, offset)
 
-  // Map files
   const result = documents.map((doc) => {
     const files = doc.files
       ? doc.files.split('|').map((str) => {
@@ -339,7 +351,6 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
     return { ...doc, files }
   })
 
-  // Optional: total count for frontend pagination
   const total = db
     .prepare(`SELECT COUNT(*) as count FROM documents d ${whereClause}`)
     .get(...params).count

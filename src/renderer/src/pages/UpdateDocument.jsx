@@ -325,7 +325,7 @@ export default function UpdateDocument() {
                   onClick={() => !isNotFound && fileInputRef.current.click()}
                   onDrop={onDrop}
                   onDragOver={(e) => e.preventDefault()}
-                  className={`border-2 border-dashed rounded-xl p-12 text-center border-gray-300 transition
+                  className={`border-2 border-dashed rounded p-12 text-center border-gray-300 transition
                   ${isNotFound ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-emerald-50'}`}
                 >
                   <Upload size={28} className="mx-auto text-gray-500" />

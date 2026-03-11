@@ -75,6 +75,14 @@ export function getDB() {
       `
     ).run()
 
+    // Documents index
+    db.prepare(
+      `
+      CREATE INDEX IF NOT EXISTS idx_documents_parent
+      ON documents(parent_document_id)
+      `
+    ).run()
+
     // Document files table
     db.prepare(
       `

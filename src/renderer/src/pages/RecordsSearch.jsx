@@ -110,7 +110,8 @@ export default function RecordsSearch() {
         fileCount: doc.files?.length || 0,
         files: doc.files,
         created_at: doc.created_at,
-        updated_at: doc.updated_at
+        updated_at: doc.updated_at,
+        relation_count: doc.relation_count
       }))
 
       setRecords(formatted)
@@ -368,7 +369,7 @@ export default function RecordsSearch() {
                               setTreeOpen(true)
                             }}
                           >
-                            <Network size={16} />
+                            <Network size={16} />({record.relation_count})
                           </button>
                           {/* Info icon button */}
                           <button

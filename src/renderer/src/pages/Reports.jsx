@@ -1,8 +1,9 @@
-import { FileText, ChevronLeft, ChevronRight, Info } from 'lucide-react'
+import { FileText, ChevronLeft, ChevronRight, Info, Network } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import FilesModal from '../components/FilesModal'
 import ReportStats from '../components/ReportStats'
 import RecordInfoModal from '../components/InfoModal'
+import TreeViewModal from '../components/TreeViewModal'
 
 export default function ReportsPage() {
   const [upazilas, setUpazilas] = useState([])
@@ -18,6 +19,8 @@ export default function ReportsPage() {
   const [currentFiles, setCurrentFiles] = useState([])
   const [selectedRecord, setSelectedRecord] = useState(null)
   const [infoModalOpen, setInfoModalOpen] = useState(false)
+  const [treeOpen, setTreeOpen] = useState(false)
+  const [documentTree, setDocumentTree] = useState(null)
 
   // Pagination state
   const [page, setPage] = useState(1)
@@ -89,7 +92,8 @@ export default function ReportsPage() {
         fileCount: doc.files?.length || 0,
         files: doc.files,
         created_at: doc.created_at,
-        updated_at: doc.updated_at
+        updated_at: doc.updated_at,
+        relation_count: doc.relation_count
       }))
 
       setRecords(formatted)
@@ -134,6 +138,8 @@ export default function ReportsPage() {
           loadDocuments()
         }}
       />
+
+      <TreeViewModal isOpen={treeOpen} onClose={() => setTreeOpen(false)} tree={documentTree} />
 
       <div className="bg-gray-100 p-8">
         <div className="max-w-7xl mx-auto">
@@ -333,6 +339,18 @@ export default function ReportsPage() {
                           >
                             <FileText size={16} />
                             Files ({record.fileCount})
+                          </button>
+
+                          {/* Tree button */}
+                          <button
+                            className="inline-flex items-center gap-2 px-2 py-2 border border-gray-300 rounded text-sm whitespace-nowrap"
+                            onClick={async () => {
+                              const tree = await window.api.getDocumentTree(record.id)
+                              setDocumentTree(tree)
+                              setTreeOpen(true)
+                            }}
+                          >
+                            <Network size={16} />({record.relation_count})
                           </button>
 
                           <button
