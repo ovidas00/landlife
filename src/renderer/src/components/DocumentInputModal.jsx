@@ -70,11 +70,11 @@ export default function DocumentPickerModal({ isOpen, onClose, onSubmit }) {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded shadow-lg w-full max-w-3xl p-6"
+        className="bg-white rounded shadow-lg w-full max-w-3xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-4 px-6 py-4 border-b border-gray-300">
           <h2 className="text-lg font-semibold text-gray-900">Search Document</h2>
           <button onClick={onClose} className="p-2 rounded hover:bg-gray-100">
             <X size={20} />
@@ -82,7 +82,7 @@ export default function DocumentPickerModal({ isOpen, onClose, onSubmit }) {
         </div>
 
         {/* Body */}
-        <div className="space-y-4">
+        <div className="space-y-4 p-6 pt-0">
           {/* Upazila / Mouza selectors */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>

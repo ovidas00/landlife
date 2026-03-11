@@ -60,11 +60,11 @@ export default function BackupModalRegional({ isOpen, onClose, upazilaId }) {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded shadow-lg w-full max-w-md p-6"
+        className="bg-white rounded overflow-hidden shadow-lg w-full max-w-md"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-4 px-6 py-4 border border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Start Backup</h2>
           <button onClick={onClose} className="p-2 rounded hover:bg-gray-100 transition-colors">
             <X size={20} />
@@ -72,7 +72,7 @@ export default function BackupModalRegional({ isOpen, onClose, upazilaId }) {
         </div>
 
         {/* Body */}
-        <div className="space-y-4">
+        <div className="space-y-4 p-6 pt-0">
           <div>
             <label className="block font-medium text-gray-700 mb-1">Password (optional)</label>
             <input
