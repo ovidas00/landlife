@@ -53,5 +53,7 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('start-backup-regional', { password, upazilaId }),
   onBackupProgress: (callback) =>
     ipcRenderer.on('backup-progress', (event, progress) => callback(progress)),
-  getBackupState: () => ipcRenderer.invoke('get-backup-state')
+  getBackupState: () => ipcRenderer.invoke('get-backup-state'),
+  findDocument: (payload) => ipcRenderer.invoke('find-document', payload),
+  getDocumentTree: (rootDocumentId) => ipcRenderer.invoke('get-document-tree', rootDocumentId)
 })

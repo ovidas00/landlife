@@ -357,7 +357,9 @@ export default function RecordsSearch() {
                           {/* Info icon button */}
                           <button
                             className="p-2 border border-gray-300 rounded hover:bg-gray-100"
-                            onClick={() => {
+                            onClick={async () => {
+                              const tree = await window.api.getDocumentTree(1)
+                              console.log(JSON.stringify(tree))
                               setSelectedRecord(record)
                               setInfoModalOpen(true)
                             }}

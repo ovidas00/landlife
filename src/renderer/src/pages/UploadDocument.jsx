@@ -1,6 +1,7 @@
-import { Upload, X, File } from 'lucide-react'
+import { Upload, X, File, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { showError, showSuccess } from '../utils/toast'
+import DocumentInputModal from '../components/DocumentInputModal'
 
 export default function UploadDocument() {
   const [upazilas, setUpazilas] = useState([])
@@ -16,6 +17,10 @@ export default function UploadDocument() {
   const [remarks, setRemarks] = useState('')
   const [files, setFiles] = useState([])
   const [loading, setLoading] = useState(false)
+  const [previousDocument, setPreviousDocument] = useState(null)
+  const [nextDocument, setNextDocument] = useState(null)
+  const [inputModalOpen, setInputModalOpen] = useState(false)
+  const [actionReletion, setActionRelation] = useState('previous')
 
   const fileInputRef = useRef(null)
   const isNotFound = docType === 'not_found'
@@ -92,7 +97,9 @@ export default function UploadDocument() {
       holdingNo,
       docType,
       remarks,
-      files
+      files,
+      previousDocumentId: previousDocument?.id || null,
+      nextDocumentId: nextDocument?.id || null
     }
 
     try {
@@ -104,9 +111,11 @@ export default function UploadDocument() {
         setKhatianNo('')
         setDagNo('')
         setHoldingNo('')
-        setDocType('')
+        setDocType('usable')
         setRemarks('')
         setFiles([])
+        setPreviousDocument(null)
+        setNextDocument(null)
       } else {
         showError('Upload failed')
       }
@@ -118,202 +127,316 @@ export default function UploadDocument() {
     setLoading(false)
   }
 
+  const handleSearchDocument = async (formData) => {
+    try {
+      const { upazilaId, mouzaId, khatianNo, holdingNo, plotNo } = formData
+
+      const document = await window.api.findDocument({
+        upazilaId,
+        mouzaId,
+        khatianNo,
+        holdingNo: holdingNo || null,
+        plotNo: plotNo || null
+      })
+
+      if (!document) {
+        showError('No document found with the given details.')
+        return
+      }
+
+      if (actionReletion === 'previous') {
+        setPreviousDocument(document)
+      } else {
+        setNextDocument(document)
+      }
+    } catch (err) {
+      console.error(err)
+      showError('Failed to fetch document. Check console for details.')
+    }
+  }
+
   return (
-    <div className="bg-gray-100 p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-grey-900 mb-3">Upload Document</h1>
-          <p className="text-gray-600">Register new land documents to the secure archive.</p>
-        </div>
+    <>
+      {/* Document Input Modal for Previous Next document */}
+      <DocumentInputModal
+        isOpen={inputModalOpen}
+        onClose={() => setInputModalOpen(false)}
+        onSubmit={handleSearchDocument}
+      />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* LEFT */}
-          <div className="space-y-6">
-            <div className="bg-white border-2 border-gray-200 shadow-xs overflow-hidden">
-              <div className="h-1 bg-emerald-700"></div>
-
-              <div className="p-6 space-y-4">
-                <h2 className="text-xl font-bold text-emerald-800">Location Details</h2>
-
-                <div>
-                  <label className="block mb-2 font-medium">Upazila *</label>
-                  <select
-                    value={selectedUpazila}
-                    onChange={(e) => setSelectedUpazila(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                  >
-                    <option value="">Select Upazila</option>
-                    {upazilas.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block mb-2 font-medium">Mouza *</label>
-                  <select
-                    value={mouza}
-                    onChange={(e) => setMouza(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                  >
-                    <option value="">Select Mouza</option>
-                    {mouzas.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block mb-2 font-medium">Volume *</label>
-                  <select
-                    value={volume}
-                    onChange={(e) => setVolume(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                  >
-                    <option value="">Select Volume</option>
-                    {volumes.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded border-2 border-gray-200 shadow-xs overflow-hidden">
-              <div className="h-1 bg-emerald-700"></div>
-
-              <div className="p-6 space-y-4">
-                <h2 className="text-xl font-bold text-emerald-800">Land Records</h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block mb-2 font-medium">Khatian No</label>
-                    <input
-                      type="text"
-                      placeholder="Enter Khatian"
-                      value={khatianNo}
-                      onChange={(e) => setKhatianNo(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block mb-2 font-medium">Holding No</label>
-                    <input
-                      type="text"
-                      placeholder="Enter Holding"
-                      value={holdingNo}
-                      onChange={(e) => setHoldingNo(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block mb-2 font-medium">Plot No</label>
-                    <input
-                      type="text"
-                      placeholder="Enter Plot"
-                      value={dagNo}
-                      onChange={(e) => setDagNo(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block mb-2 font-medium">Document Type *</label>
-                  <select
-                    value={docType}
-                    onChange={(e) => setDocType(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                  >
-                    <option value="usable">Usable Records</option>
-                    <option value="unusable">Unusable Records</option>
-                    <option value="moderate">Moderately Usable</option>
-                    <option value="not_found">Not Found Records</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block mb-2 font-medium">Remarks</label>
-                  <input
-                    type="text"
-                    placeholder="Enter Extra Info"
-                    value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                  />
-                </div>
-              </div>
-            </div>
+      <div className="bg-gray-100 p-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold text-grey-900 mb-3">Upload Document</h1>
+            <p className="text-gray-600">Register new land documents to the secure archive.</p>
           </div>
 
-          {/* RIGHT */}
-          <div className="bg-white shadow-xs border-2 border-gray-200 overflow-hidden">
-            <div className="bg-emerald-700 h-1"></div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* LEFT */}
+            <div className="space-y-6">
+              <div className="bg-white border-2 border-gray-200 shadow-xs overflow-hidden">
+                <div className="h-1 bg-emerald-700"></div>
 
-            <div className="p-6">
-              <h2 className="text-xl font-bold text-emerald-800 mb-4">Document Scans</h2>
+                <div className="p-6 space-y-4">
+                  <h2 className="text-xl font-bold text-emerald-800">Location Details</h2>
 
-              {/* upload area */}
-              <div
-                onClick={() => !isNotFound && fileInputRef.current.click()}
-                onDrop={onDrop}
-                onDragOver={(e) => e.preventDefault()}
-                className={`border-2 rounded border-dashed p-12 text-center border-gray-300 transition
-                  ${isNotFound ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-emerald-50'}`}
-              >
-                <Upload size={28} className="mx-auto text-gray-500" />
-                <p className="mt-4 text-gray-600">
-                  {isNotFound ? 'Documents not required' : 'Click or drop PDFs here'}
-                </p>
-
-                <input
-                  type="file"
-                  multiple
-                  accept=".pdf"
-                  hidden
-                  ref={fileInputRef}
-                  onChange={onFileChange}
-                />
-              </div>
-
-              {/* file list */}
-              <div className={`${isNotFound ? 'opacity-40 pointer-events-none' : ''}`}>
-                {files.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    {files.map((f, i) => (
-                      <div key={i} className="flex justify-between bg-gray-100 p-2 rounded">
-                        <div className="flex items-center gap-2">
-                          <File size={20} />
-                          <span>{f.name}</span>
-                        </div>
-                        <button onClick={() => removeFile(i)}>
-                          <X size={18} />
-                        </button>
-                      </div>
-                    ))}
+                  <div>
+                    <label className="block mb-2 font-medium">Upazila *</label>
+                    <select
+                      value={selectedUpazila}
+                      onChange={(e) => setSelectedUpazila(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    >
+                      <option value="">Select Upazila</option>
+                      {upazilas.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                )}
+
+                  <div>
+                    <label className="block mb-2 font-medium">Mouza *</label>
+                    <select
+                      value={mouza}
+                      onChange={(e) => setMouza(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    >
+                      <option value="">Select Mouza</option>
+                      {mouzas.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block mb-2 font-medium">Volume *</label>
+                    <select
+                      value={volume}
+                      onChange={(e) => setVolume(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    >
+                      <option value="">Select Volume</option>
+                      {volumes.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
 
-              <button
-                onClick={submitDocument}
-                disabled={loading}
-                className="mt-6 w-full bg-emerald-700 text-white py-3 rounded hover:bg-emerald-800 disabled:opacity-50 font-bold"
-              >
-                {loading ? 'Uploading...' : 'Submit Document'}
-              </button>
+              <div className="bg-white rounded border-2 border-gray-200 shadow-xs overflow-hidden">
+                <div className="h-1 bg-emerald-700"></div>
+
+                <div className="p-6 space-y-4">
+                  <h2 className="text-xl font-bold text-emerald-800">Land Records</h2>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block mb-2 font-medium">Khatian No</label>
+                      <input
+                        type="text"
+                        placeholder="Enter Khatian"
+                        value={khatianNo}
+                        onChange={(e) => setKhatianNo(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block mb-2 font-medium">Holding No</label>
+                      <input
+                        type="text"
+                        placeholder="Enter Holding"
+                        value={holdingNo}
+                        onChange={(e) => setHoldingNo(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block mb-2 font-medium">Plot No</label>
+                      <input
+                        type="text"
+                        placeholder="Enter Plot"
+                        value={dagNo}
+                        onChange={(e) => setDagNo(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block mb-2 font-medium">Document Type *</label>
+                    <select
+                      value={docType}
+                      onChange={(e) => setDocType(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    >
+                      <option value="usable">Usable Records</option>
+                      <option value="unusable">Unusable Records</option>
+                      <option value="moderate">Moderately Usable</option>
+                      <option value="not_found">Not Found Records</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block mb-2 font-medium">Remarks</label>
+                    <input
+                      type="text"
+                      placeholder="Enter Extra Info"
+                      value={remarks}
+                      onChange={(e) => setRemarks(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT */}
+            <div className="bg-white shadow-xs border-2 border-gray-200 overflow-hidden">
+              <div className="bg-emerald-700 h-1"></div>
+
+              <div className="p-6">
+                <h2 className="text-xl font-bold text-emerald-800 mb-4">Document Scans</h2>
+
+                {/* upload area */}
+                <div
+                  onClick={() => !isNotFound && fileInputRef.current.click()}
+                  onDrop={onDrop}
+                  onDragOver={(e) => e.preventDefault()}
+                  className={`border-2 rounded border-dashed p-12 text-center border-gray-300 transition
+                  ${isNotFound ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-emerald-50'}`}
+                >
+                  <Upload size={28} className="mx-auto text-gray-500" />
+                  <p className="mt-4 text-gray-600">
+                    {isNotFound ? 'Documents not required' : 'Click or drop PDFs here'}
+                  </p>
+
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf"
+                    hidden
+                    ref={fileInputRef}
+                    onChange={onFileChange}
+                  />
+                </div>
+
+                {/* file list */}
+                <div className={`${isNotFound ? 'opacity-40 pointer-events-none' : ''}`}>
+                  {files.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      {files.map((f, i) => (
+                        <div key={i} className="flex justify-between bg-gray-100 p-2 rounded">
+                          <div className="flex items-center gap-2">
+                            <File size={20} />
+                            <span>{f.name}</span>
+                          </div>
+                          <button onClick={() => removeFile(i)}>
+                            <X size={18} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Previous / Next Document Info */}
+                <div className="mt-4 flex gap-4">
+                  {/* Previous Document Card */}
+                  <div
+                    onClick={() => {
+                      setActionRelation('previous')
+                      setInputModalOpen(true)
+                    }}
+                    className={`flex-1 cursor-pointer border rounded p-4
+      ${previousDocument ? 'bg-emerald-50 border-emerald-300' : 'bg-gray-50 border-gray-200 opacity-80'}
+    `}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 text-emerald-800 font-semibold">
+                        <ArrowLeft size={18} /> Previous
+                      </div>
+                      {previousDocument && (
+                        <span className="text-sm text-gray-500">ID: {previousDocument.id}</span>
+                      )}
+                    </div>
+                    {previousDocument ? (
+                      <div className="space-y-1 text-gray-700 text-sm">
+                        <div>
+                          <span className="font-medium">Khatian No:</span>{' '}
+                          {previousDocument.khatian_no}
+                        </div>
+                        <div>
+                          <span className="font-medium">Holding No:</span>{' '}
+                          {previousDocument.holding_no || '-'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Dag No:</span>{' '}
+                          {previousDocument.dag_no || '-'}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-gray-400 text-sm">No document selected</div>
+                    )}
+                  </div>
+
+                  {/* Next Document Card */}
+                  <div
+                    onClick={() => {
+                      setActionRelation('next')
+                      setInputModalOpen(true)
+                    }}
+                    className={`flex-1 cursor-pointer border rounded p-4
+      ${nextDocument ? 'bg-emerald-50 border-emerald-300' : 'bg-gray-50 border-gray-200 opacity-80'}
+    `}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 text-emerald-800 font-semibold">
+                        Next <ArrowRight size={18} />
+                      </div>
+                      {nextDocument && (
+                        <span className="text-sm text-gray-500">ID: {nextDocument.id}</span>
+                      )}
+                    </div>
+                    {nextDocument ? (
+                      <div className="space-y-1 text-gray-700 text-sm">
+                        <div>
+                          <span className="font-medium">Khatian No:</span> {nextDocument.khatian_no}
+                        </div>
+                        <div>
+                          <span className="font-medium">Holding No:</span>{' '}
+                          {nextDocument.holding_no || '-'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Dag No:</span> {nextDocument.dag_no || '-'}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-gray-400 text-sm">No document selected</div>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  onClick={submitDocument}
+                  disabled={loading}
+                  className="mt-6 w-full bg-emerald-700 text-white py-3 rounded hover:bg-emerald-800 disabled:opacity-50 font-bold"
+                >
+                  {loading ? 'Uploading...' : 'Submit Document'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }

@@ -54,18 +54,25 @@ export function getDB() {
         upazila_id INTEGER NOT NULL,
         mouza_id INTEGER NOT NULL,
         volume_id INTEGER NOT NULL,
+
         khatian_no TEXT,
         dag_no TEXT,
         holding_no TEXT,
         doc_type TEXT,
         remarks TEXT,
+
+        parent_document_id INTEGER,
+
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
         FOREIGN KEY (upazila_id) REFERENCES upazilas(id) ON DELETE RESTRICT,
         FOREIGN KEY (mouza_id) REFERENCES mouzas(id) ON DELETE RESTRICT,
-        FOREIGN KEY (volume_id) REFERENCES volumes(id) ON DELETE RESTRICT
+        FOREIGN KEY (volume_id) REFERENCES volumes(id) ON DELETE RESTRICT,
+
+        FOREIGN KEY (parent_document_id) REFERENCES documents(id) ON DELETE SET NULL
       )
-    `
+      `
     ).run()
 
     // Document files table

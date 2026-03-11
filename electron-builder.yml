@@ -14,16 +14,16 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
 
-  # # remove Windows binaries
-  # - '!**/node_modules/**/win/x64/**'
-  # - '!**/node_modules/**/win/ia32/**'
-  # - '!**/node_modules/**/win/arm64/**'
+  # remove Windows binaries
+  - '!**/node_modules/**/win/x64/**'
+  - '!**/node_modules/**/win/ia32/**'
+  - '!**/node_modules/**/win/arm64/**'
 
-  # # remove macOS binaries
-  # - '!**/node_modules/**/darwin/**'
-  # - '!**/node_modules/**/*.dylib'
-  # - '!**/node_modules/**/mac/**'
-  # - '!**/node_modules/**/osx/**'
+  # remove macOS binaries
+  - '!**/node_modules/**/darwin/**'
+  - '!**/node_modules/**/*.dylib'
+  - '!**/node_modules/**/mac/**'
+  - '!**/node_modules/**/osx/**'
 
   # # remove Linux binaries
   # - '!**/node_modules/**/linux/**'

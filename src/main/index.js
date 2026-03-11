@@ -177,27 +177,67 @@ ipcMain.handle('get-volumes', async (event, upazilaId) => {
 ipcMain.handle('upload-document', async (event, payload) => {
   const db = getDB()
 
-  const { upazilaId, mouzaId, volumeId, khatianNo, dagNo, holdingNo, docType, remarks, files } =
-    payload
+  const {
+    upazilaId,
+    mouzaId,
+    volumeId,
+    khatianNo,
+    dagNo,
+    holdingNo,
+    docType,
+    remarks,
+    files,
+    previousDocumentId,
+    nextDocumentId
+  } = payload
 
-  // folder to store PDFs
   const baseDir = join(getDocumentFolder(), 'documents')
   if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
 
-  // create document record
+  // determine parent
+  let parentId = null
+
+  if (previousDocumentId) {
+    parentId = previousDocumentId
+  }
+
+  // insert document
   const result = db
     .prepare(
       `
-    INSERT INTO documents
-    (upazila_id, mouza_id, volume_id, khatian_no, dag_no, holding_no, doc_type, remarks, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+6 hours'), datetime('now', '+6 hours'))
+      INSERT INTO documents
+      (
+        upazila_id,
+        mouza_id,
+        volume_id,
+        khatian_no,
+        dag_no,
+        holding_no,
+        doc_type,
+        remarks,
+        parent_document_id,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+6 hours'), datetime('now', '+6 hours'))
   `
     )
-    .run(upazilaId, mouzaId, volumeId, khatianNo, dagNo, holdingNo, docType, remarks)
+    .run(upazilaId, mouzaId, volumeId, khatianNo, dagNo, holdingNo, docType, remarks, parentId)
 
   const documentId = result.lastInsertRowid
 
-  // save files (skip if none — allowed for "not_found")
+  // if inserting between two documents
+  if (nextDocumentId) {
+    db.prepare(
+      `
+      UPDATE documents
+      SET parent_document_id = ?
+      WHERE id = ?
+    `
+    ).run(documentId, nextDocumentId)
+  }
+
+  // save files
   const fileStmt = db.prepare(`
     INSERT INTO document_files (document_id, file_name, file_path)
     VALUES (?, ?, ?)
@@ -660,4 +700,72 @@ ipcMain.handle('get-backup-state', async () => {
     totalStats,
     upazilas
   }
+})
+
+ipcMain.handle('find-document', async (event, payload) => {
+  const db = getDB()
+
+  const { upazilaId, mouzaId, khatianNo, holdingNo, plotNo } = payload
+
+  if (!upazilaId) throw new Error('Upazila is required')
+  if (!mouzaId) throw new Error('Mouza is required')
+  if (!khatianNo || !khatianNo.trim()) throw new Error('Khatian No is required')
+
+  const conditions = ['upazila_id = ?', 'mouza_id = ?', 'LOWER(khatian_no) = ?']
+  const params = [upazilaId, mouzaId, khatianNo.trim().toLowerCase()]
+
+  if (holdingNo && holdingNo.trim()) {
+    conditions.push('LOWER(holding_no) = ?')
+    params.push(holdingNo.trim().toLowerCase())
+  }
+
+  if (plotNo && plotNo.trim()) {
+    conditions.push('LOWER(dag_no) = ?')
+    params.push(plotNo.trim().toLowerCase())
+  }
+
+  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+
+  const doc = db
+    .prepare(
+      `
+      SELECT *
+      FROM documents
+      ${whereClause}
+      LIMIT 1
+    `
+    )
+    .get(...params)
+
+  return doc || null
+})
+
+ipcMain.handle('get-document-tree', async (event, rootId) => {
+  if (!rootId) throw new Error('Document ID is required')
+
+  const db = getDB()
+
+  const tree = db
+    .prepare(
+      `
+      WITH RECURSIVE doc_tree(id, parent_document_id, depth) AS (
+        SELECT id, parent_document_id, 0
+        FROM documents
+        WHERE id = ?
+
+        UNION ALL
+
+        SELECT d.id, d.parent_document_id, dt.depth + 1
+        FROM documents d
+        JOIN doc_tree dt
+          ON d.parent_document_id = dt.id
+      )
+      SELECT id, parent_document_id, depth
+      FROM doc_tree
+      ORDER BY depth
+  `
+    )
+    .all(rootId)
+
+  return tree
 })
