@@ -41,6 +41,8 @@ function createWindow() {
   }
 }
 
+const db = getDB() // Initialize db
+
 // This method will be called when Electron has finished
 app.whenReady().then(() => {
   // Set app user model id for windows
@@ -63,8 +65,6 @@ app.on('window-all-closed', () => {
 })
 
 ipcMain.handle('add-upazilla', async (event, name) => {
-  const db = getDB()
-
   const normalizedName = name.trim()
   const exists = db
     .prepare('SELECT 1 FROM upazilas WHERE lower(name) = lower(?)')
@@ -80,7 +80,6 @@ ipcMain.handle('add-upazilla', async (event, name) => {
 })
 
 ipcMain.handle('get-upazilas', async () => {
-  const db = getDB()
   const stmt = db.prepare('SELECT * FROM upazilas')
   const rows = stmt.all()
 
@@ -88,15 +87,12 @@ ipcMain.handle('get-upazilas', async () => {
 })
 
 ipcMain.handle('delete-upazila', (event, upazilaId) => {
-  const db = getDB()
   db.prepare('DELETE FROM upazilas WHERE id = ?').run(upazilaId)
 
   return { success: true }
 })
 
 ipcMain.handle('add-mouza', (event, name, upazilaId) => {
-  const db = getDB()
-
   const normalizedName = name.trim()
   const exists = db
     .prepare(
@@ -123,20 +119,16 @@ ipcMain.handle('add-mouza', (event, name, upazilaId) => {
 })
 
 ipcMain.handle('get-mouzas', (event, upazilaId) => {
-  const db = getDB()
   return db.prepare('SELECT * FROM mouzas WHERE upazila_id = ?').all(upazilaId)
 })
 
 ipcMain.handle('delete-mouza', (event, mouzaId) => {
-  const db = getDB()
   db.prepare('DELETE FROM mouzas WHERE id = ?').run(mouzaId)
 
   return { success: true }
 })
 
 ipcMain.handle('add-volume', (event, name, upazilaId) => {
-  const db = getDB()
-
   const normalizedName = name.trim()
   const exists = db
     .prepare(
@@ -163,20 +155,16 @@ ipcMain.handle('add-volume', (event, name, upazilaId) => {
 })
 
 ipcMain.handle('delete-volume', (event, volumeId) => {
-  const db = getDB()
   db.prepare('DELETE FROM volumes WHERE id = ?').run(volumeId)
 
   return { success: true }
 })
 
 ipcMain.handle('get-volumes', async (event, upazilaId) => {
-  const db = getDB()
   return db.prepare('SELECT * FROM volumes WHERE upazila_id = ?').all(upazilaId)
 })
 
 ipcMain.handle('upload-document', async (event, payload) => {
-  const db = getDB()
-
   const {
     upazilaId,
     mouzaId,
@@ -256,8 +244,6 @@ ipcMain.handle('upload-document', async (event, payload) => {
 })
 
 ipcMain.handle('get-documents', async (event, filters = {}) => {
-  const db = getDB()
-
   const { upazilaId, mouzaId, volumeId, docType, searchQuery, page = 1, pageSize = 50 } = filters
 
   const offset = (page - 1) * pageSize
@@ -364,8 +350,6 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
 ipcMain.handle('get-document-by-id', async (event, documentId) => {
   if (!documentId) throw new Error('Document ID is required')
 
-  const db = getDB()
-
   // Fetch the document with joined names and files
   const doc = db
     .prepare(
@@ -405,8 +389,6 @@ ipcMain.handle('get-document-by-id', async (event, documentId) => {
 })
 
 ipcMain.handle('update-document', async (event, payload) => {
-  const db = getDB()
-
   const {
     id,
     upazilaId,
@@ -479,8 +461,6 @@ ipcMain.handle('update-document', async (event, payload) => {
 })
 
 ipcMain.handle('delete-document', async (event, documentId) => {
-  const db = getDB()
-
   const files = db
     .prepare(`SELECT file_path FROM document_files WHERE document_id = ?`)
     .all(documentId)
@@ -509,8 +489,6 @@ ipcMain.handle('open-file', async (event, filePath) => {
 })
 
 ipcMain.handle('get-dashboard-state', async () => {
-  const db = getDB()
-
   // Total documents
   const totalDocuments = db.prepare(`SELECT COUNT(*) AS count FROM documents`).get().count
 
@@ -566,8 +544,6 @@ ipcMain.handle('get-dashboard-state', async () => {
 })
 
 ipcMain.handle('get-report-state', async (event, filters = {}) => {
-  const db = getDB()
-
   const { upazilaId, mouzaId, volumeId, docType } = filters
 
   // Build WHERE conditions dynamically
@@ -665,8 +641,6 @@ ipcMain.handle('start-backup-regional', async (event, { password = null, upazila
 })
 
 ipcMain.handle('get-backup-state', async () => {
-  const db = getDB()
-
   // Overall stats
   const totalStats = db
     .prepare(
@@ -703,8 +677,6 @@ ipcMain.handle('get-backup-state', async () => {
 })
 
 ipcMain.handle('find-document', async (event, payload) => {
-  const db = getDB()
-
   const { upazilaId, mouzaId, khatianNo, holdingNo, plotNo } = payload
 
   if (!upazilaId) throw new Error('Upazila is required')
@@ -742,8 +714,6 @@ ipcMain.handle('find-document', async (event, payload) => {
 
 ipcMain.handle('get-document-tree', async (event, rootId) => {
   if (!rootId) throw new Error('Document ID is required')
-
-  const db = getDB()
 
   const tree = db
     .prepare(

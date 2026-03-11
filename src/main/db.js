@@ -70,7 +70,7 @@ export function getDB() {
         FOREIGN KEY (mouza_id) REFERENCES mouzas(id) ON DELETE RESTRICT,
         FOREIGN KEY (volume_id) REFERENCES volumes(id) ON DELETE RESTRICT,
 
-        FOREIGN KEY (parent_document_id) REFERENCES documents(id) ON DELETE SET NULL
+        FOREIGN KEY (parent_document_id) REFERENCES documents(id) ON DELETE RESTRICT
       )
       `
     ).run()
