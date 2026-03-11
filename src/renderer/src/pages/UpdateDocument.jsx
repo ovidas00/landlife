@@ -1,9 +1,10 @@
-import { Upload, X, File, Delete, Trash, Trash2 } from 'lucide-react'
+import { Upload, X, File, Trash2, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom' // assuming you use React Router
 import Breadcrumb from '../components/Breadcrumb'
 import { showError, showSuccess } from '../utils/toast'
 import ConfirmModal from '../components/ConfirmModal'
+import DocumentInputModal from '../components/DocumentInputModal'
 
 export default function UpdateDocument() {
   const location = useLocation()
@@ -24,8 +25,11 @@ export default function UpdateDocument() {
   const [files, setFiles] = useState([]) // new files to upload
   const [existingFiles, setExistingFiles] = useState([]) // files already uploaded
   const [loading, setLoading] = useState(false)
-  const [deleteId, setDeleteId] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [previousDocument, setPreviousDocument] = useState(null)
+  const [nextDocument, setNextDocument] = useState(null)
+  const [inputModalOpen, setInputModalOpen] = useState(false)
+  const [actionReletion, setActionRelation] = useState('previous')
 
   const fileInputRef = useRef(null)
   const isNotFound = docType === 'not_found'
@@ -58,6 +62,8 @@ export default function UpdateDocument() {
     setDocType(doc.doc_type || 'usable')
     setRemarks(doc.remarks || '')
     setExistingFiles(doc.files || [])
+    setPreviousDocument(doc.previousDocument || null)
+    setNextDocument(doc.nextDocument || null)
   }
 
   useEffect(() => {
@@ -143,6 +149,34 @@ export default function UpdateDocument() {
     setLoading(false)
   }
 
+  const handleSearchDocument = async (formData) => {
+    try {
+      const { upazilaId, mouzaId, khatianNo, holdingNo, plotNo } = formData
+
+      const document = await window.api.findDocument({
+        upazilaId,
+        mouzaId,
+        khatianNo,
+        holdingNo: holdingNo || null,
+        plotNo: plotNo || null
+      })
+
+      if (!document) {
+        showError('No document found with the given details.')
+        return
+      }
+
+      if (actionReletion === 'previous') {
+        setPreviousDocument(document)
+      } else {
+        setNextDocument(document)
+      }
+    } catch (err) {
+      console.error(err)
+      showError('Failed to fetch document. Check console for details.')
+    }
+  }
+
   return (
     <>
       {/* Confirm modal */}
@@ -164,6 +198,13 @@ export default function UpdateDocument() {
             showError('Failed to delete document')
           }
         }}
+      />
+
+      {/* Document Input Modal for Previous Next document */}
+      <DocumentInputModal
+        isOpen={inputModalOpen}
+        onClose={() => setInputModalOpen(false)}
+        onSubmit={handleSearchDocument}
       />
 
       <div className="bg-gray-100 p-8">
@@ -376,6 +417,83 @@ export default function UpdateDocument() {
                     ))}
                   </div>
                 )}
+
+                {/* Previous / Next Document Info */}
+                <div className="mt-4 flex gap-4">
+                  {/* Previous Document Card */}
+                  <div
+                    onClick={() => {
+                      setActionRelation('previous')
+                      setInputModalOpen(true)
+                    }}
+                    className={`flex-1 cursor-pointer border rounded p-4
+      ${previousDocument ? 'bg-emerald-50 border-emerald-300' : 'bg-gray-50 border-gray-200 opacity-80'}
+    `}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 text-emerald-800 font-semibold">
+                        <ArrowLeft size={18} /> Previous
+                      </div>
+                      {previousDocument && (
+                        <span className="text-sm text-gray-500">ID: {previousDocument.id}</span>
+                      )}
+                    </div>
+                    {previousDocument ? (
+                      <div className="space-y-1 text-gray-700 text-sm">
+                        <div>
+                          <span className="font-medium">Khatian No:</span>{' '}
+                          {previousDocument.khatian_no}
+                        </div>
+                        <div>
+                          <span className="font-medium">Holding No:</span>{' '}
+                          {previousDocument.holding_no || '-'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Dag No:</span>{' '}
+                          {previousDocument.dag_no || '-'}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-gray-400 text-sm">No document selected</div>
+                    )}
+                  </div>
+
+                  {/* Next Document Card */}
+                  <div
+                    onClick={() => {
+                      setActionRelation('next')
+                      setInputModalOpen(true)
+                    }}
+                    className={`flex-1 cursor-pointer border rounded p-4
+      ${nextDocument ? 'bg-emerald-50 border-emerald-300' : 'bg-gray-50 border-gray-200 opacity-80'}
+    `}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 text-emerald-800 font-semibold">
+                        Next <ArrowRight size={18} />
+                      </div>
+                      {nextDocument && (
+                        <span className="text-sm text-gray-500">ID: {nextDocument.id}</span>
+                      )}
+                    </div>
+                    {nextDocument ? (
+                      <div className="space-y-1 text-gray-700 text-sm">
+                        <div>
+                          <span className="font-medium">Khatian No:</span> {nextDocument.khatian_no}
+                        </div>
+                        <div>
+                          <span className="font-medium">Holding No:</span>{' '}
+                          {nextDocument.holding_no || '-'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Dag No:</span> {nextDocument.dag_no || '-'}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-gray-400 text-sm">No document selected</div>
+                    )}
+                  </div>
+                </div>
 
                 <button
                   onClick={submitDocument}

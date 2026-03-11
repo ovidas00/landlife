@@ -182,6 +182,11 @@ ipcMain.handle('upload-document', async (event, payload) => {
   const baseDir = join(getDocumentFolder(), 'documents')
   if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
 
+  // Prevent invalid cycle
+  if (previousDocumentId && nextDocumentId && previousDocumentId === nextDocumentId) {
+    return { success: false, message: '' }
+  }
+
   // determine parent
   let parentId = null
 
@@ -361,7 +366,7 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
 ipcMain.handle('get-document-by-id', async (event, documentId) => {
   if (!documentId) throw new Error('Document ID is required')
 
-  // Fetch the document with joined names and files
+  // Fetch the main document
   const doc = db
     .prepare(
       `
@@ -396,7 +401,39 @@ ipcMain.handle('get-document-by-id', async (event, documentId) => {
       })
     : []
 
-  return { ...doc, files }
+  // Fetch previous document (parent)
+  let previousDocument = null
+  if (doc.parent_document_id) {
+    previousDocument = db
+      .prepare(
+        `
+        SELECT id, khatian_no, dag_no, holding_no
+        FROM documents
+        WHERE id = ?
+        `
+      )
+      .get(doc.parent_document_id)
+  }
+
+  // Fetch next document (first sibling with same parent)
+  const nextDocument = db
+    .prepare(
+      `
+      SELECT id, khatian_no, dag_no, holding_no
+      FROM documents
+      WHERE parent_document_id = ?
+      ORDER BY id ASC
+      LIMIT 1
+      `
+    )
+    .get(doc.id)
+
+  return {
+    ...doc,
+    files,
+    previousDocument,
+    nextDocument
+  }
 })
 
 ipcMain.handle('update-document', async (event, payload) => {
