@@ -1,7 +1,8 @@
-import { Search, FileText, ChevronLeft, ChevronRight, Info } from 'lucide-react'
+import { Search, FileText, ChevronLeft, ChevronRight, Info, Network } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 import FilesModal from '../components/FilesModal'
 import RecordInfoModal from '../components/InfoModal'
+import TreeViewModal from '../components/TreeViewModal'
 
 export default function RecordsSearch() {
   const [upazilas, setUpazilas] = useState([])
@@ -18,6 +19,8 @@ export default function RecordsSearch() {
   const [infoModalOpen, setInfoModalOpen] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState(null)
   const [currentFiles, setCurrentFiles] = useState([])
+  const [treeOpen, setTreeOpen] = useState(false)
+  const [documentTree, setDocumentTree] = useState(null)
 
   // Pagination state
   const [page, setPage] = useState(1)
@@ -148,6 +151,8 @@ export default function RecordsSearch() {
           loadDocuments()
         }}
       />
+
+      <TreeViewModal isOpen={treeOpen} onClose={() => setTreeOpen(false)} tree={documentTree} />
 
       <div className="bg-gray-100 p-8">
         <div className="max-w-7xl mx-auto">
@@ -354,12 +359,21 @@ export default function RecordsSearch() {
                             <FileText size={16} />
                             Files ({record.fileCount})
                           </button>
+                          {/* Tree button */}
+                          <button
+                            className="inline-flex items-center gap-2 px-2 py-2 border border-gray-300 rounded text-sm whitespace-nowrap"
+                            onClick={async () => {
+                              const tree = await window.api.getDocumentTree(record.id)
+                              setDocumentTree(tree)
+                              setTreeOpen(true)
+                            }}
+                          >
+                            <Network size={16} />
+                          </button>
                           {/* Info icon button */}
                           <button
                             className="p-2 border border-gray-300 rounded hover:bg-gray-100"
-                            onClick={async () => {
-                              const tree = await window.api.getDocumentTree(1)
-                              console.log(JSON.stringify(tree))
+                            onClick={() => {
                               setSelectedRecord(record)
                               setInfoModalOpen(true)
                             }}

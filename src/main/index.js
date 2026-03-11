@@ -718,21 +718,46 @@ ipcMain.handle('get-document-tree', async (event, rootId) => {
   const tree = db
     .prepare(
       `
-      WITH RECURSIVE doc_tree(id, parent_document_id, depth) AS (
-        SELECT id, parent_document_id, 0
-        FROM documents
-        WHERE id = ?
+    WITH RECURSIVE doc_tree(
+      id,
+      parent_document_id,
+      khatian_no,
+      dag_no,
+      holding_no,
+      depth
+    ) AS (
+      SELECT
+        id,
+        parent_document_id,
+        khatian_no,
+        dag_no,
+        holding_no,
+        0
+      FROM documents
+      WHERE id = ?
 
-        UNION ALL
+      UNION ALL
 
-        SELECT d.id, d.parent_document_id, dt.depth + 1
-        FROM documents d
-        JOIN doc_tree dt
-          ON d.parent_document_id = dt.id
-      )
-      SELECT id, parent_document_id, depth
-      FROM doc_tree
-      ORDER BY depth
+      SELECT
+        d.id,
+        d.parent_document_id,
+        d.khatian_no,
+        d.dag_no,
+        d.holding_no,
+        dt.depth + 1
+      FROM documents d
+      JOIN doc_tree dt
+        ON d.parent_document_id = dt.id
+    )
+    SELECT
+      id,
+      parent_document_id,
+      khatian_no,
+      dag_no,
+      holding_no,
+      depth
+    FROM doc_tree
+    ORDER BY depth
   `
     )
     .all(rootId)
