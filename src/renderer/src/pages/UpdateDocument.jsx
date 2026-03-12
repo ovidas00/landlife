@@ -435,7 +435,7 @@ export default function UpdateDocument() {
                         <ArrowLeft size={18} /> Previous
                       </div>
                       {previousDocument && (
-                        <span className="text-sm text-gray-500">ID: {previousDocument.id}</span>
+                        <span className="text-sm text-gray-500">#: {previousDocument.id}</span>
                       )}
                     </div>
                     {previousDocument ? (
@@ -449,7 +449,7 @@ export default function UpdateDocument() {
                           {previousDocument.holding_no || '-'}
                         </div>
                         <div>
-                          <span className="font-medium">Dag No:</span>{' '}
+                          <span className="font-medium">Plot No:</span>{' '}
                           {previousDocument.dag_no || '-'}
                         </div>
                       </div>
@@ -473,7 +473,7 @@ export default function UpdateDocument() {
                         Next <ArrowRight size={18} />
                       </div>
                       {nextDocument && (
-                        <span className="text-sm text-gray-500">ID: {nextDocument.id}</span>
+                        <span className="text-sm text-gray-500">#: {nextDocument.id}</span>
                       )}
                     </div>
                     {nextDocument ? (
@@ -486,7 +486,7 @@ export default function UpdateDocument() {
                           {nextDocument.holding_no || '-'}
                         </div>
                         <div>
-                          <span className="font-medium">Dag No:</span> {nextDocument.dag_no || '-'}
+                          <span className="font-medium">Plot No:</span> {nextDocument.dag_no || '-'}
                         </div>
                       </div>
                     ) : (

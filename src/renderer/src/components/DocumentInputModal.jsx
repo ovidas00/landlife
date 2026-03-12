@@ -2,7 +2,14 @@ import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { showError } from '../utils/toast'
 
-export default function DocumentPickerModal({ isOpen, onClose, onSubmit }) {
+export default function DocumentPickerModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  upazilaId,
+  mouzaId,
+  onClear
+}) {
   const [upazilas, setUpazilas] = useState([])
   const [mouzas, setMouzas] = useState([])
 
@@ -14,11 +21,19 @@ export default function DocumentPickerModal({ isOpen, onClose, onSubmit }) {
     plotNo: ''
   })
 
+  useEffect(() => {
+    if (upazilaId && mouzaId) {
+      setFormData((prev) => ({ ...prev, upazilaId, mouzaId }))
+    }
+  }, [upazilaId, mouzaId])
+
   // Load Upazilas
   const loadUpazilas = async () => {
     const data = await window.api.getUpazilas()
     setUpazilas(data)
-    if (data.length > 0) {
+
+    // only set default if no prop value
+    if (data.length > 0 && !upazilaId) {
       setFormData((prev) => ({
         ...prev,
         upazilaId: data[0].id
@@ -30,7 +45,8 @@ export default function DocumentPickerModal({ isOpen, onClose, onSubmit }) {
   const loadMouzas = async (upazilaId) => {
     const data = await window.api.getMouzas(upazilaId)
     setMouzas(data)
-    if (data.length > 0) {
+
+    if (data.length > 0 && !mouzaId) {
       setFormData((prev) => ({ ...prev, mouzaId: data[0].id }))
     }
   }
@@ -47,8 +63,15 @@ export default function DocumentPickerModal({ isOpen, onClose, onSubmit }) {
 
   const handleSubmit = () => {
     const { upazilaId, mouzaId } = formData
-    if (!formData.upazilaId || !formData.mouzaId || !formData.khatianNo.trim()) {
-      showError('Please fill the information')
+    // Upazila and Mouza must exist
+    if (!formData.upazilaId || !formData.mouzaId) {
+      showError('Please select Upazila and Mouza')
+      return
+    }
+
+    // At least one of the 3 fields must be filled
+    if (!formData.khatianNo.trim() && !formData.holdingNo.trim() && !formData.plotNo.trim()) {
+      showError('Please enter at least Khatian, Holding, or Plot number')
       return
     }
 
@@ -70,7 +93,7 @@ export default function DocumentPickerModal({ isOpen, onClose, onSubmit }) {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded shadow-lg w-full max-w-3xl"
+        className="bg-white rounded shadow-lg w-full max-w-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -84,7 +107,7 @@ export default function DocumentPickerModal({ isOpen, onClose, onSubmit }) {
         {/* Body */}
         <div className="space-y-4 p-6 pt-0">
           {/* Upazila / Mouza selectors */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div>
               <label className="block mb-2 font-medium">Upazila</label>
               <select
@@ -153,9 +176,15 @@ export default function DocumentPickerModal({ isOpen, onClose, onSubmit }) {
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-2 font-medium mt-4">
-            <button onClick={onClose} className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200">
-              Cancel
+          <div className="flex justify-end mt-6 gap-3 font-medium">
+            <button
+              onClick={() => {
+                onClear()
+                onClose()
+              }}
+              className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200"
+            >
+              Clear
             </button>
             <button
               onClick={handleSubmit}

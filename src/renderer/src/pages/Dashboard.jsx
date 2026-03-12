@@ -199,8 +199,10 @@ export default function Dashboard() {
                   </div>
                   <p className="text-xl font-bold text-gray-900 leading-tight">
                     {stat.value}
-                    {stat.percent && (
+                    {stat.percent ? (
                       <span className="text-sm text-gray-500 ml-2">({stat.percent}%)</span>
+                    ) : (
+                      <span className="text-sm text-gray-500 ml-2">(0.0%)</span>
                     )}
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5">{stat.subtitle}</p>
@@ -249,8 +251,10 @@ export default function Dashboard() {
                   </div>
                   <p className="text-xl font-bold text-gray-900 leading-tight">
                     {stat.value}
-                    {stat.percent && (
+                    {stat.percent ? (
                       <span className="text-sm text-gray-500 ml-2">({stat.percent}%)</span>
+                    ) : (
+                      <span className="text-sm text-gray-500 ml-2">(0.0%)</span>
                     )}
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5">{stat.subtitle}</p>

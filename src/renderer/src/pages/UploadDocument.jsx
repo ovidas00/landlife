@@ -117,7 +117,7 @@ export default function UploadDocument() {
         setPreviousDocument(null)
         setNextDocument(null)
       } else {
-        showError('Upload failed')
+        showError(result?.message ? `Upload Failed: ${result.message}` : 'Upload Failed')
       }
     } catch (err) {
       console.error(err)
@@ -155,6 +155,14 @@ export default function UploadDocument() {
     }
   }
 
+  const handleClear = () => {
+    if (actionReletion === 'previous') {
+      setPreviousDocument(null)
+    } else {
+      setNextDocument(null)
+    }
+  }
+
   return (
     <>
       {/* Document Input Modal for Previous Next document */}
@@ -162,6 +170,9 @@ export default function UploadDocument() {
         isOpen={inputModalOpen}
         onClose={() => setInputModalOpen(false)}
         onSubmit={handleSearchDocument}
+        upazilaId={selectedUpazila}
+        mouzaId={mouza}
+        onClear={handleClear}
       />
 
       <div className="bg-gray-100 p-8">
@@ -365,7 +376,7 @@ export default function UploadDocument() {
                         <ArrowLeft size={18} /> Previous
                       </div>
                       {previousDocument && (
-                        <span className="text-sm text-gray-500">ID: {previousDocument.id}</span>
+                        <span className="text-sm text-gray-500">#: {previousDocument.id}</span>
                       )}
                     </div>
                     {previousDocument ? (
@@ -379,7 +390,7 @@ export default function UploadDocument() {
                           {previousDocument.holding_no || '-'}
                         </div>
                         <div>
-                          <span className="font-medium">Dag No:</span>{' '}
+                          <span className="font-medium">Plot No:</span>{' '}
                           {previousDocument.dag_no || '-'}
                         </div>
                       </div>
@@ -403,7 +414,7 @@ export default function UploadDocument() {
                         Next <ArrowRight size={18} />
                       </div>
                       {nextDocument && (
-                        <span className="text-sm text-gray-500">ID: {nextDocument.id}</span>
+                        <span className="text-sm text-gray-500">#: {nextDocument.id}</span>
                       )}
                     </div>
                     {nextDocument ? (
@@ -416,7 +427,7 @@ export default function UploadDocument() {
                           {nextDocument.holding_no || '-'}
                         </div>
                         <div>
-                          <span className="font-medium">Dag No:</span> {nextDocument.dag_no || '-'}
+                          <span className="font-medium">Plot No:</span> {nextDocument.dag_no || '-'}
                         </div>
                       </div>
                     ) : (

@@ -274,7 +274,7 @@ export default function Locations() {
                       className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                     />
                     <button
-                      className="px-6 py-2 bg-emerald-700 text-white rounded"
+                      className="px-6 py-2 bg-emerald-700 text-white font-medium rounded hover:bg-emerald-800 transition-colors"
                       onClick={async () => {
                         if (mouzaName && selectedUpazila) {
                           try {
@@ -371,7 +371,7 @@ export default function Locations() {
                       className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                     />
                     <button
-                      className="px-6 py-2 bg-emerald-700 text-white rounded"
+                      className="px-6 py-2 bg-emerald-700 text-white font-medium rounded hover:bg-emerald-800 transition-colors"
                       onClick={async () => {
                         if (volumeName && selectedUpazilaVolume) {
                           try {
