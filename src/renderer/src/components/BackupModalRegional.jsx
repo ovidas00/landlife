@@ -61,7 +61,11 @@ export default function BackupModalRegional({ isOpen, onClose, upazilaId }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
+      onClick={() => {
+        if (!loading) {
+          onClose()
+        }
+      }}
     >
       <div
         className="bg-white rounded overflow-hidden shadow-lg w-full max-w-md"
@@ -70,7 +74,14 @@ export default function BackupModalRegional({ isOpen, onClose, upazilaId }) {
         {/* Header */}
         <div className="flex justify-between items-center mb-4 px-6 py-4 border border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Start Backup</h2>
-          <button onClick={onClose} className="p-2 rounded hover:bg-gray-100 transition-colors">
+          <button
+            onClick={() => {
+              if (!loading) {
+                onClose()
+              }
+            }}
+            className="p-2 rounded hover:bg-gray-100 transition-colors"
+          >
             <X size={20} />
           </button>
         </div>
