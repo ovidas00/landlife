@@ -58,5 +58,7 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('backup-progress', (event, progress) => callback(progress)),
   getBackupState: () => ipcRenderer.invoke('get-backup-state'),
   findDocument: (payload) => ipcRenderer.invoke('find-document', payload),
-  getDocumentTree: (rootDocumentId) => ipcRenderer.invoke('get-document-tree', rootDocumentId)
+  getDocumentTree: (rootDocumentId) => ipcRenderer.invoke('get-document-tree', rootDocumentId),
+
+  exportDocuments: (filters) => ipcRenderer.invoke('export-documents', filters)
 })

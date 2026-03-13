@@ -4,7 +4,14 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { getDB } from './db'
 import fs from 'node:fs'
-import { backupFolder, backupFolderRegional, getDocumentFolder } from './utils'
+import {
+  backupFolder,
+  backupFolderRegional,
+  exportToCSV,
+  exportToExcel,
+  exportToPDF,
+  getDocumentFolder
+} from './utils'
 
 function createWindow() {
   // Create the browser window.
@@ -271,7 +278,7 @@ ipcMain.handle('upload-document', async (event, payload) => {
     nextDocumentId
   } = payload
 
-  const baseDir = join(await getDocumentFolder(), 'documents')
+  const baseDir = join(getDocumentFolder(), 'documents')
   if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
 
   // Prevent invalid cycle
@@ -595,7 +602,7 @@ ipcMain.handle('update-document', async (event, payload) => {
 
   if (!id) throw new Error('Document ID is required')
 
-  const baseDir = join(await getDocumentFolder(), 'documents')
+  const baseDir = join(getDocumentFolder(), 'documents')
   if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
 
   function isValidPosition(previousId, nextId, db) {
@@ -761,7 +768,7 @@ ipcMain.handle('delete-document', async (event, documentId) => {
 
 ipcMain.handle('open-file', async (event, filePath) => {
   if (!filePath) return
-  const path = join(await getDocumentFolder(), 'documents', basename(filePath))
+  const path = join(getDocumentFolder(), 'documents', basename(filePath))
   await shell.openPath(path) // opens PDF in default system app
 })
 
@@ -876,7 +883,7 @@ ipcMain.handle('get-report-state', async (event, filters = {}) => {
 })
 
 ipcMain.handle('start-backup', async (event, password = null) => {
-  const sourceDir = await getDocumentFolder()
+  const sourceDir = getDocumentFolder()
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
 
   const { canceled, filePath } = await dialog.showSaveDialog({
@@ -899,7 +906,7 @@ ipcMain.handle('start-backup', async (event, password = null) => {
 })
 
 ipcMain.handle('start-backup-regional', async (event, { password = null, upazilaId }) => {
-  const sourceDir = await getDocumentFolder()
+  const sourceDir = getDocumentFolder()
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
 
   const { canceled, filePath } = await dialog.showSaveDialog({
@@ -1009,4 +1016,135 @@ ipcMain.handle('get-document-tree', async (event, rootId) => {
   }
 
   return chain
+})
+
+ipcMain.handle('export-documents', async (event, filters) => {
+  const { format, upazilaId, mouzaId, volumeId, docType, searchQuery } = filters
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+
+  const defaultName =
+    format === 'excel'
+      ? `documents-${timestamp}.xlsx`
+      : format === 'word'
+        ? `documents-${timestamp}.docx`
+        : format === 'csv'
+          ? `documents-${timestamp}.csv`
+          : `documents-${timestamp}.pdf`
+
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    title: 'Save documents export',
+    defaultPath: join(app.getPath('downloads'), defaultName)
+  })
+
+  if (canceled || !filePath) return { success: false }
+
+  // Filters
+  const conditions = []
+  const params = []
+
+  if (upazilaId) {
+    conditions.push('d.upazila_id = ?')
+    params.push(upazilaId)
+  }
+  if (mouzaId) {
+    conditions.push('d.mouza_id = ?')
+    params.push(mouzaId)
+  }
+  if (volumeId) {
+    conditions.push('d.volume_id = ?')
+    params.push(volumeId)
+  }
+  if (docType) {
+    conditions.push('d.doc_type = ?')
+    params.push(docType)
+  }
+  if (searchQuery) {
+    const q = `%${searchQuery.toLowerCase()}%`
+    conditions.push(`(
+      LOWER(d.khatian_no) LIKE ?
+      OR LOWER(d.dag_no) LIKE ?
+      OR LOWER(d.holding_no) LIKE ?
+    )`)
+    params.push(q, q, q)
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+  // Fetch documents
+  const documents = db
+    .prepare(
+      `
+      SELECT 
+        d.*,
+        u.name AS upazilaName,
+        m.name AS mouzaName,
+        v.name AS volumeName
+      FROM documents d
+      LEFT JOIN upazilas u ON d.upazila_id = u.id
+      LEFT JOIN mouzas m ON d.mouza_id = m.id
+      LEFT JOIN volumes v ON d.volume_id = v.id
+      ${whereClause}
+      ORDER BY d.id DESC
+      `
+    )
+    .all(...params)
+
+  if (!documents.length) {
+    return { success: false, message: 'No data found for selected filters.' }
+  }
+
+  const docData = documents.map((d) => ({
+    '#': d.id,
+    Upazila: d.upazilaName,
+    Mouza: d.mouzaName,
+    Volume: d.volumeName,
+    Khatian: d.khatian_no || 'N/A',
+    Holding: d.holding_no || 'N/A',
+    Plot: d.dag_no || 'N/A',
+    Type: d.doc_type ? d.doc_type.charAt(0).toUpperCase() + d.doc_type.slice(1) : 'N/A',
+    Remarks: d.remarks || '',
+    'Created At': d.created_at,
+    'Last Updated': d.updated_at
+  }))
+
+  try {
+    if (format === 'csv') {
+      const success = await exportToCSV({
+        data: docData,
+        outDir: filePath
+      })
+
+      return { success }
+    } else if (format === 'excel') {
+      const success = await exportToExcel({ data: docData, outDir: filePath })
+      return { success }
+    }
+    {
+      // PDF export
+      const tableData = [
+        ['#', 'Upazila', 'Mouza', 'Volume', 'Khatian', 'Holding', 'Plot', 'Type'],
+        ...documents.map((d) => [
+          d.id,
+          d.upazilaName,
+          d.mouzaName,
+          d.volumeName,
+          d.khatian_no || 'N/A',
+          d.holding_no || 'N/A',
+          d.dag_no || 'N/A',
+          d.doc_type.charAt(0).toUpperCase() + d.doc_type.slice(1)
+        ])
+      ]
+
+      const success = await exportToPDF({
+        tableData,
+        columnWidths: [40, '*', 60, 60, 60, 50, 55, 55],
+        outDir: filePath
+      })
+
+      return { success }
+    }
+  } catch (err) {
+    console.error('Export failed:', err)
+    return { success: false }
+  }
 })
