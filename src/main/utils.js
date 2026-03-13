@@ -69,9 +69,7 @@ export async function backupFolder(sourceDir, outputArchive, password = null, we
         process.resourcesPath,
         'app.asar.unpacked',
         'node_modules',
-        'node-7z',
-        'bin',
-        process.platform === 'win32' ? '7z.exe' : '7z'
+        path7za.slice(path7za.indexOf('node_modules') + 'node_modules'.length + 1)
       )
     : path7za
 
@@ -145,9 +143,7 @@ export async function backupFolderRegional(
         process.resourcesPath,
         'app.asar.unpacked',
         'node_modules',
-        'node-7z',
-        'bin',
-        process.platform === 'win32' ? '7z.exe' : '7z'
+        path7za.slice(path7za.indexOf('node_modules') + 'node_modules'.length + 1)
       )
     : path7za
 
