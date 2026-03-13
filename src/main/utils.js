@@ -9,6 +9,16 @@ import Database from 'better-sqlite3'
 import PDFDocument from 'pdfkit'
 import { writeToStream } from '@fast-csv/format'
 import ExcelJS from 'exceljs'
+import {
+  Document,
+  Packer,
+  Paragraph,
+  Table,
+  TableCell,
+  TableRow,
+  WidthType,
+  AlignmentType
+} from 'docx'
 
 export function getDocumentFolder() {
   let folder
@@ -381,6 +391,72 @@ export async function exportToExcel({ data = [], outDir }) {
     return true
   } catch (err) {
     console.error('Excel export failed:', err)
+    return false
+  }
+}
+
+export async function exportToWord({ data = [], outDir }) {
+  try {
+    if (!data.length) return false
+
+    // Create table rows
+    const headers = Object.keys(data[0])
+    const tableRows = []
+
+    // Header row
+    const headerRow = new TableRow({
+      children: headers.map(
+        (h) =>
+          new TableCell({
+            width: { size: 100 / headers.length, type: WidthType.PERCENTAGE },
+            children: [
+              new Paragraph({ text: h, alignment: AlignmentType.CENTER, spacing: { after: 100 } })
+            ]
+          })
+      )
+    })
+    tableRows.push(headerRow)
+
+    // Data rows
+    data.forEach((row) => {
+      const tr = new TableRow({
+        children: headers.map(
+          (h) =>
+            new TableCell({
+              children: [new Paragraph({ text: row[h]?.toString() || '', spacing: { after: 50 } })]
+            })
+        )
+      })
+      tableRows.push(tr)
+    })
+
+    // Create document
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: [
+            new Paragraph({
+              text: 'Documents Export',
+              heading: 'Heading1',
+              alignment: AlignmentType.CENTER
+            }),
+            new Table({
+              rows: tableRows,
+              width: { size: 100, type: WidthType.PERCENTAGE }
+            })
+          ]
+        }
+      ]
+    })
+
+    // Write file
+    const buffer = await Packer.toBuffer(doc)
+    await fsp.writeFile(outDir, buffer)
+
+    return true
+  } catch (err) {
+    console.error('Word export failed:', err)
     return false
   }
 }

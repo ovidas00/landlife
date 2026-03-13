@@ -1,9 +1,10 @@
-import { FileText, ChevronLeft, ChevronRight, Info, Network } from 'lucide-react'
+import { FileText, ChevronLeft, ChevronRight, Info, Network, Download } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import FilesModal from '../components/FilesModal'
 import ReportStats from '../components/ReportStats'
 import RecordInfoModal from '../components/InfoModal'
 import TreeViewModal from '../components/TreeViewModal'
+import ExportModal from '../components/ExportModal'
 
 export default function ReportsPage() {
   const [upazilas, setUpazilas] = useState([])
@@ -21,6 +22,7 @@ export default function ReportsPage() {
   const [infoModalOpen, setInfoModalOpen] = useState(false)
   const [treeOpen, setTreeOpen] = useState(false)
   const [documentTree, setDocumentTree] = useState(null)
+  const [isExportOpen, setIsExportOpen] = useState(false)
 
   // Pagination state
   const [page, setPage] = useState(1)
@@ -140,6 +142,17 @@ export default function ReportsPage() {
       />
 
       <TreeViewModal isOpen={treeOpen} onClose={() => setTreeOpen(false)} tree={documentTree} />
+
+      <ExportModal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        filters={{
+          ...(selectedDocType && { docType: selectedDocType }),
+          ...(selectedUpazila && { upazilaId: selectedUpazila }),
+          ...(selectedMouza && { mouzaId: selectedMouza }),
+          ...(selectedVolume && { volumeId: selectedVolume })
+        }}
+      />
 
       <div className="bg-gray-100 p-8">
         <div className="max-w-7xl mx-auto">
@@ -377,25 +390,41 @@ export default function ReportsPage() {
             </table>
 
             {/* Pagination Controls */}
-            {!loading && totalPages > 1 && (
-              <div className="flex justify-end items-center gap-2 p-4 border-gray-200">
+            {!loading && total > 0 && (
+              <div className="flex items-center justify-between p-4">
+                {/* Export Button */}
                 <button
-                  className="p-2 rounded-full bg-gray-200 disabled:opacity-50"
-                  disabled={page === 1}
-                  onClick={() => setPage(page - 1)}
+                  className="inline-flex items-center gap-2 px-2 py-1 border border-gray-300 rounded text-sm whitespace-nowrap"
+                  onClick={() => {
+                    setIsExportOpen(true)
+                  }}
                 >
-                  <ChevronLeft size={16} />
+                  <Download size={16} />
+                  Export
                 </button>
-                <span className="text-sm">
-                  Page {page} of {totalPages}
-                </span>
-                <button
-                  className="p-2 rounded-full bg-gray-200 disabled:opacity-50"
-                  disabled={page === totalPages}
-                  onClick={() => setPage(page + 1)}
-                >
-                  <ChevronRight size={16} />
-                </button>
+
+                {/* Pagination */}
+                <div className="flex items-center gap-3">
+                  <button
+                    className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                    disabled={page === 1}
+                    onClick={() => setPage(page - 1)}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+
+                  <span className="text-sm text-gray-600">
+                    Page {page} of {totalPages}
+                  </span>
+
+                  <button
+                    className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                    disabled={page === totalPages}
+                    onClick={() => setPage(page + 1)}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
               </div>
             )}
           </div>

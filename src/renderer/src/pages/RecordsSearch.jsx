@@ -3,7 +3,6 @@ import { useEffect, useState, useRef } from 'react'
 import FilesModal from '../components/FilesModal'
 import RecordInfoModal from '../components/InfoModal'
 import TreeViewModal from '../components/TreeViewModal'
-import { showError, showSuccess } from '../utils/toast'
 import ExportModal from '../components/ExportModal'
 
 export default function RecordsSearch() {

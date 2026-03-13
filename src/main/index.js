@@ -10,6 +10,7 @@ import {
   exportToCSV,
   exportToExcel,
   exportToPDF,
+  exportToWord,
   getDocumentFolder
 } from './utils'
 
@@ -1117,6 +1118,10 @@ ipcMain.handle('export-documents', async (event, filters) => {
       return { success }
     } else if (format === 'excel') {
       const success = await exportToExcel({ data: docData, outDir: filePath })
+      return { success }
+    }
+    if (format === 'word') {
+      const success = await exportToWord({ data: docData, outDir: filePath })
       return { success }
     }
     {
