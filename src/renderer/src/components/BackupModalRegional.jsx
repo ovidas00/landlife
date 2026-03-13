@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
-import { showSuccess } from '../utils/toast'
+import { showError, showSuccess } from '../utils/toast'
 
 export default function BackupModalRegional({ isOpen, onClose, upazilaId }) {
   const [password, setPassword] = useState('')
@@ -40,13 +40,17 @@ export default function BackupModalRegional({ isOpen, onClose, upazilaId }) {
 
     try {
       setLoading(true)
-      await window.api.startBackupRegional(pwd, upazilaId)
+      const res = await window.api.startBackupRegional(pwd, upazilaId)
       setProgress({ processed: 0, total: 0, percent: 0 })
       setLoading(false)
       setPassword('')
       setError('')
       onClose()
-      showSuccess('Backup successful')
+      if (res?.success) {
+        showSuccess('Backup successful')
+      } else {
+        showError('Backup failed')
+      }
     } catch (err) {
       setLoading(false)
       setError('Backup failed. See console for details.')
@@ -95,22 +99,22 @@ export default function BackupModalRegional({ isOpen, onClose, upazilaId }) {
               <progress
                 value={progress.processed}
                 max={progress.total}
-                className="w-full h-2 rounded overflow-hidden bg-gray-100"
+                className="w-full h-2 rounded overflow-hidden"
               />
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex justify-end gap-2 font-medium">
+          <div className="flex justify-end gap-3 font-medium">
             <button
-              className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200"
+              className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={onClose}
               disabled={loading}
             >
               Cancel
             </button>
             <button
-              className="px-6 py-2 bg-emerald-700 text-white rounded hover:bg-emerald-800"
+              className="px-6 py-2 bg-emerald-700 text-white rounded hover:bg-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleStartBackup}
               disabled={loading}
             >

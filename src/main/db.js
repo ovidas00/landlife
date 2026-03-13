@@ -4,9 +4,9 @@ import { getDocumentFolder } from './utils'
 
 let db
 
-export function getDB() {
+export async function getDB() {
   if (!db) {
-    const dbPath = join(getDocumentFolder(), 'app.db')
+    const dbPath = join(await getDocumentFolder(), 'app.db')
     db = new Database(dbPath)
 
     // Enable foreign keys

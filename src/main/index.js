@@ -41,12 +41,14 @@ function createWindow() {
   }
 }
 
-const db = getDB() // Initialize db
+let db // global variable
 
-// This method will be called when Electron has finished
-app.whenReady().then(() => {
-  // Set app user model id for windows
+async function initApp() {
+  db = await getDB()
+
+  // Your app setup
   electronApp.setAppUserModelId('com.edulife.landlife')
+
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -56,7 +58,9 @@ app.whenReady().then(() => {
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
-})
+}
+
+app.whenReady().then(initApp)
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -267,7 +271,7 @@ ipcMain.handle('upload-document', async (event, payload) => {
     nextDocumentId
   } = payload
 
-  const baseDir = join(getDocumentFolder(), 'documents')
+  const baseDir = join(await getDocumentFolder(), 'documents')
   if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
 
   // Prevent invalid cycle
@@ -591,7 +595,7 @@ ipcMain.handle('update-document', async (event, payload) => {
 
   if (!id) throw new Error('Document ID is required')
 
-  const baseDir = join(getDocumentFolder(), 'documents')
+  const baseDir = join(await getDocumentFolder(), 'documents')
   if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
 
   function isValidPosition(previousId, nextId, db) {
@@ -705,7 +709,9 @@ ipcMain.handle('update-document', async (event, payload) => {
       for (const f of filesToDelete) {
         try {
           if (fs.existsSync(f.file_path)) fs.unlinkSync(f.file_path)
-        } catch {}
+        } catch {
+          // Ignore
+        }
         db.prepare(`DELETE FROM document_files WHERE id = ?`).run(f.id)
       }
 
@@ -755,7 +761,7 @@ ipcMain.handle('delete-document', async (event, documentId) => {
 
 ipcMain.handle('open-file', async (event, filePath) => {
   if (!filePath) return
-  const path = join(getDocumentFolder(), 'documents', basename(filePath))
+  const path = join(await getDocumentFolder(), 'documents', basename(filePath))
   await shell.openPath(path) // opens PDF in default system app
 })
 
@@ -870,7 +876,7 @@ ipcMain.handle('get-report-state', async (event, filters = {}) => {
 })
 
 ipcMain.handle('start-backup', async (event, password = null) => {
-  const sourceDir = getDocumentFolder()
+  const sourceDir = await getDocumentFolder()
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
 
   const { canceled, filePath } = await dialog.showSaveDialog({
@@ -893,7 +899,7 @@ ipcMain.handle('start-backup', async (event, password = null) => {
 })
 
 ipcMain.handle('start-backup-regional', async (event, { password = null, upazilaId }) => {
-  const sourceDir = getDocumentFolder()
+  const sourceDir = await getDocumentFolder()
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
 
   const { canceled, filePath } = await dialog.showSaveDialog({
@@ -906,9 +912,13 @@ ipcMain.handle('start-backup-regional', async (event, { password = null, upazila
     return { success: false, canceled: true }
   }
 
-  await backupFolderRegional(sourceDir, filePath, password, event.sender, upazilaId)
-
-  return { success: true, path: filePath }
+  try {
+    await backupFolderRegional(sourceDir, filePath, password, event.sender, upazilaId)
+    return { success: true, path: filePath }
+  } catch (err) {
+    console.error('Backup failed in main process:', err)
+    throw err
+  }
 })
 
 ipcMain.handle('get-backup-state', async () => {

@@ -80,7 +80,7 @@ export default function ExportPage() {
 
                 <span className="text-gray-600">
                   <span className="font-semibold text-gray-900">
-                    {loading ? '...' : totalStats.files}
+                    {loading ? '...' : totalStats.files + 1}
                   </span>{' '}
                   Files
                 </span>

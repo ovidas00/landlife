@@ -1,100 +1,141 @@
 import { app } from 'electron'
 import { join, parse } from 'node:path'
-import fs from 'node:fs'
+import fs from 'node:fs/promises'
 import Seven from 'node-7z'
 import { path7za } from '7zip-bin'
 import os from 'node:os'
 import Database from 'better-sqlite3'
 
-export function getDocumentFolder() {
+export async function getDocumentFolder() {
   let folder
 
   if (process.platform === 'win32') {
     const exeFolder = join(parse(app.getPath('exe')).root, 'LandLifeFiles')
-
     try {
-      fs.mkdirSync(exeFolder, { recursive: true })
+      await fs.mkdir(exeFolder, { recursive: true })
       folder = exeFolder
     } catch {
       folder = join(
         process.env.LOCALAPPDATA || join(app.getPath('home'), 'AppData', 'Local'),
         app.getName()
       )
-      if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true })
+      await fs.mkdir(folder, { recursive: true })
     }
   } else if (process.platform === 'darwin') {
     folder = join(app.getPath('home'), 'Library', 'Application Support', app.getName())
-    if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true })
+    await fs.mkdir(folder, { recursive: true })
   } else {
     folder = join(app.getPath('home'), '.local', 'share', app.getName())
-    if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true })
+    await fs.mkdir(folder, { recursive: true })
   }
 
   return folder
 }
 
-export async function backupFolder(sourceDir, outputArchive, password = null, webContents) {
-  return new Promise((resolve, reject) => {
-    let bin
-
-    if (app.isPackaged) {
-      const nm = path7za.indexOf('node_modules')
-      const relative = path7za.slice(nm + 'node_modules'.length + 1)
-      bin = join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', relative)
+async function countFiles(dir) {
+  let count = 0
+  const list = await fs.readdir(dir)
+  for (const item of list) {
+    const fullPath = join(dir, item)
+    const stat = await fs.stat(fullPath)
+    if (stat.isDirectory()) {
+      count += await countFiles(fullPath)
     } else {
-      bin = path7za
+      count++
     }
+  }
+  return count
+}
 
-    const options = {
-      $bin: bin,
-      $progress: true,
-      password: password || undefined
+async function countFilesList(files) {
+  let count = 0
+
+  for (const f of files) {
+    try {
+      const stat = await fs.stat(f)
+
+      if (stat.isDirectory()) {
+        // recursively count all files in the folder
+        const entries = await fs.readdir(f)
+        const fullPaths = entries.map((i) => join(f, i))
+        count += await countFilesList(fullPaths)
+      } else {
+        count++
+      }
+    } catch {
+      // ignore missing files or errors
+      continue
     }
+  }
 
-    // Copy app.db to temp folder
-    const dbPath = join(sourceDir, 'app.db')
-    const tempDir = join(os.tmpdir(), `backup-temp-${Date.now()}`)
-    fs.mkdirSync(tempDir, { recursive: true })
-    const tempDbPath = join(tempDir, 'app.db')
-    fs.copyFileSync(dbPath, tempDbPath)
+  return count
+}
 
-    // Only include temp app.db and documents folder
-    const documentsPath = join(sourceDir, 'documents')
-    const items = [tempDbPath, documentsPath]
+export async function backupFolder(sourceDir, outputArchive, password = null, webContents) {
+  // Determine 7zip binary
+  const bin = app.isPackaged
+    ? join(
+        process.resourcesPath,
+        'app.asar.unpacked',
+        'node_modules',
+        'node-7z',
+        'bin',
+        process.platform === 'win32' ? '7z.exe' : '7z'
+      )
+    : path7za
 
-    let processedCount = 0
-    const totalFiles = 1 + countFiles(documentsPath)
+  const options = {
+    $bin: bin,
+    $progress: true,
+    password: password || undefined
+  }
 
+  // TEMP DB COPY
+  const tempDir = join(os.tmpdir(), `backup-temp-${Date.now()}`)
+  await fs.mkdir(tempDir, { recursive: true })
+
+  const dbPath = join(sourceDir, 'app.db')
+  const tempDbPath = join(tempDir, 'app.db')
+  await fs.copyFile(dbPath, tempDbPath)
+
+  // DOCUMENTS PATH
+  const documentsPath = join(sourceDir, 'documents')
+  const items = [tempDbPath, documentsPath]
+
+  const totalFiles = 1 + (await countFiles(documentsPath)) // 1 for DB
+
+  return new Promise((resolve, reject) => {
     const archive = Seven.add(outputArchive, items, options)
 
-    archive.on('progress', () => {
-      processedCount++
-      const percent = ((processedCount / totalFiles) * 100).toFixed(1)
+    archive.on('progress', (data) => {
       const progressData = {
-        percent: Number(percent),
-        processed: processedCount,
+        percent: data.percent,
+        processed: data.fileCount,
         total: totalFiles
       }
-
-      console.log(`Backup progress: ${percent}% (${processedCount}/${totalFiles} items)`)
 
       if (webContents) {
         webContents.send('backup-progress', progressData)
       }
     })
 
-    archive.on('end', () => {
+    archive.on('end', async () => {
+      try {
+        await fs.rm(tempDir, { recursive: true, force: true })
+      } catch (err) {
+        console.error('Failed to clean temp folder:', err)
+      }
       console.log(`Backup complete! Archive saved at: ${outputArchive}`)
-      // Clean up temp DB
-      fs.unlinkSync(tempDbPath)
-      fs.rmdirSync(tempDir, { recursive: true })
       resolve()
     })
 
-    archive.on('error', (err) => {
+    archive.on('error', async (err) => {
+      try {
+        await fs.rm(tempDir, { recursive: true, force: true })
+      } catch {
+        // Ignore
+      }
       console.error('Backup failed:', err)
-      if (fs.existsSync(tempDbPath)) fs.unlinkSync(tempDbPath)
-      if (fs.existsSync(tempDir)) fs.rmdirSync(tempDir, { recursive: true })
       reject(err)
     })
   })
@@ -107,157 +148,125 @@ export async function backupFolderRegional(
   webContents,
   upazilaId
 ) {
-  return new Promise((resolve, reject) => {
-    let bin
+  // Determine 7zip binary
+  const bin = app.isPackaged
+    ? join(
+        process.resourcesPath,
+        'app.asar.unpacked',
+        'node_modules',
+        'node-7z',
+        'bin',
+        process.platform === 'win32' ? '7z.exe' : '7z'
+      )
+    : path7za
 
-    if (app.isPackaged) {
-      const nm = path7za.indexOf('node_modules')
-      const relative = path7za.slice(nm + 'node_modules'.length + 1)
-      bin = join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', relative)
-    } else {
-      bin = path7za
-    }
+  const options = {
+    $bin: bin,
+    $progress: true,
+    password: password || undefined
+  }
 
-    const options = {
-      $bin: bin,
-      $progress: true,
-      password: password || undefined
-    }
+  // TEMP DB COPY
+  const tempDir = join(os.tmpdir(), `backup-temp-${Date.now()}`)
+  await fs.mkdir(tempDir, { recursive: true })
 
-    // --- TEMP DB COPY ---
-    const dbPath = join(sourceDir, 'app.db')
-    const tempDir = join(os.tmpdir(), `backup-temp-${Date.now()}`)
-    fs.mkdirSync(tempDir, { recursive: true })
-    const tempDbPath = join(tempDir, 'app.db')
-    fs.copyFileSync(dbPath, tempDbPath)
+  const dbPath = join(sourceDir, 'app.db')
+  const tempDbPath = join(tempDir, 'app.db')
+  await fs.copyFile(dbPath, tempDbPath)
 
-    // --- FILTER DB ---
-    const tempDb = new Database(tempDbPath)
-    tempDb.pragma('foreign_keys = OFF')
+  // --- FILTER DB ---
+  const tempDb = new Database(tempDbPath)
+  tempDb.pragma('foreign_keys = OFF')
 
-    const tx = tempDb.transaction((upazilaId) => {
-      tempDb.prepare(`DELETE FROM documents WHERE upazila_id != ?`).run(upazilaId)
-      tempDb.prepare(`DELETE FROM mouzas WHERE upazila_id != ?`).run(upazilaId)
-      tempDb.prepare(`DELETE FROM volumes WHERE upazila_id != ?`).run(upazilaId)
-      tempDb.prepare(`DELETE FROM upazilas WHERE id != ?`).run(upazilaId)
-      tempDb
-        .prepare(
-          `DELETE FROM document_files 
-           WHERE document_id NOT IN (SELECT id FROM documents)`
-        )
-        .run()
-    })
-
-    tx(upazilaId)
-
-    // --- Integrity check ---
-    const check = tempDb.prepare('PRAGMA integrity_check').get()
-    if (check.integrity_check !== 'ok') {
-      tempDb.close()
-      throw new Error('Filtered DB failed integrity check')
-    }
-
-    tempDb.exec('VACUUM')
-    tempDb.pragma('foreign_keys = ON')
-
-    // --- Get only files for this upazila directly from DB ---
-    const rows = tempDb
+  const tx = tempDb.transaction((upazilaId) => {
+    tempDb.prepare(`DELETE FROM documents WHERE upazila_id != ?`).run(upazilaId)
+    tempDb.prepare(`DELETE FROM mouzas WHERE upazila_id != ?`).run(upazilaId)
+    tempDb.prepare(`DELETE FROM volumes WHERE upazila_id != ?`).run(upazilaId)
+    tempDb.prepare(`DELETE FROM upazilas WHERE id != ?`).run(upazilaId)
+    tempDb
       .prepare(
-        `SELECT df.file_path 
+        `DELETE FROM document_files 
+           WHERE document_id NOT IN (SELECT id FROM documents)`
+      )
+      .run()
+  })
+
+  tx(upazilaId)
+
+  // --- Integrity check ---
+  const check = tempDb.prepare('PRAGMA integrity_check').get()
+  if (check.integrity_check !== 'ok') {
+    tempDb.close()
+    throw new Error('Filtered DB failed integrity check')
+  }
+
+  tempDb.exec('VACUUM')
+  tempDb.pragma('foreign_keys = ON')
+
+  // --- Get only files for this upazila directly from DB ---
+  const rows = tempDb
+    .prepare(
+      `SELECT df.file_path 
          FROM document_files df 
          JOIN documents d ON df.document_id = d.id 
          WHERE d.upazila_id = ?`
-      )
-      .all(upazilaId)
+    )
+    .all(upazilaId)
 
-    tempDb.close()
+  tempDb.close()
 
-    // Only include files that actually exist
-    const filesToInclude = rows.map((r) => r.file_path).filter((p) => fs.existsSync(p))
+  // Only include files that actually exist
+  const filesToInclude = (
+    await Promise.all(
+      rows.map(async (r) => {
+        try {
+          await fs.access(r.file_path) // throws if file doesn't exist
+          return r.file_path
+        } catch {
+          return null
+        }
+      })
+    )
+  ).filter((p) => p !== null)
 
-    // Include filtered DB at root
-    filesToInclude.push(tempDbPath)
+  // Include filtered DB at root
+  filesToInclude.push(tempDbPath)
 
-    const totalFiles = countFilesList(filesToInclude)
-    let processedCount = 0
+  const totalFiles = await countFilesList(filesToInclude)
 
+  return new Promise((resolve, reject) => {
     const archive = Seven.add(outputArchive, filesToInclude, options)
 
-    archive.on('progress', () => {
-      processedCount++
-      const percent = ((processedCount / totalFiles) * 100).toFixed(1)
+    archive.on('progress', (data) => {
       const progressData = {
-        percent: Number(percent),
-        processed: processedCount,
+        percent: data.percent,
+        processed: data.fileCount,
         total: totalFiles
       }
-      if (webContents) webContents.send('backup-progress', progressData)
+
+      if (webContents) {
+        webContents.send('backup-progress', progressData)
+      }
     })
 
-    archive.on('end', () => {
-      fs.rmSync(tempDir, { recursive: true, force: true })
+    archive.on('end', async () => {
+      try {
+        await fs.rm(tempDir, { recursive: true, force: true })
+      } catch (err) {
+        console.error('Failed to clean temp folder:', err)
+      }
+      console.log(`Backup complete! Archive saved at: ${outputArchive}`)
       resolve()
     })
 
-    archive.on('error', (err) => {
-      fs.rmSync(tempDir, { recursive: true, force: true })
+    archive.on('error', async (err) => {
+      try {
+        await fs.rm(tempDir, { recursive: true, force: true })
+      } catch {
+        // Ignore
+      }
+      console.error('Backup failed:', err)
       reject(err)
     })
   })
-}
-
-function countFiles(dir) {
-  let count = 0
-  const list = fs.readdirSync(dir)
-  for (const item of list) {
-    const fullPath = join(dir, item)
-    const stat = fs.statSync(fullPath)
-    if (stat.isDirectory()) {
-      count += countFiles(fullPath)
-    } else {
-      count++
-    }
-  }
-  return count
-}
-
-function countFilesList(files) {
-  let count = 0
-  for (const f of files) {
-    if (!fs.existsSync(f)) continue
-    const stat = fs.statSync(f)
-    if (stat.isDirectory()) {
-      // recursively count all files in the folder
-      count += countFilesList(fs.readdirSync(f).map((i) => join(f, i)))
-    } else {
-      count++
-    }
-  }
-  return count
-}
-
-export function isValidPosition(previousId, nextId, db) {
-  if (!previousId || !nextId) return true // one or both ends are null → always valid
-
-  // Walk the chain from previousId to the end
-  let current = db
-    .prepare('SELECT id, next_document_id FROM documents WHERE id = ?')
-    .get(previousId)
-  const visited = new Set()
-
-  while (current) {
-    if (visited.has(current.id)) return false // safety against cycles
-    visited.add(current.id)
-
-    if (current.id === nextId) return true // previousId comes before nextId → valid
-
-    current = current.next_document_id
-      ? db
-          .prepare('SELECT id, next_document_id FROM documents WHERE id = ?')
-          .get(current.next_document_id)
-      : null
-  }
-
-  // Reached the end without seeing nextId → invalid
-  return false
 }
