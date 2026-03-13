@@ -61,7 +61,8 @@ export function getDB() {
         doc_type TEXT,
         remarks TEXT,
 
-        parent_document_id INTEGER,
+        previous_document_id INTEGER,
+        next_document_id INTEGER,
 
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -70,16 +71,9 @@ export function getDB() {
         FOREIGN KEY (mouza_id) REFERENCES mouzas(id) ON DELETE RESTRICT,
         FOREIGN KEY (volume_id) REFERENCES volumes(id) ON DELETE RESTRICT,
 
-        FOREIGN KEY (parent_document_id) REFERENCES documents(id) ON DELETE RESTRICT
+        FOREIGN KEY (previous_document_id) REFERENCES documents(id) ON DELETE SET NULL,
+        FOREIGN KEY (next_document_id) REFERENCES documents(id) ON DELETE SET NULL
       )
-      `
-    ).run()
-
-    // Documents index
-    db.prepare(
-      `
-      CREATE INDEX IF NOT EXISTS idx_documents_parent
-      ON documents(parent_document_id)
       `
     ).run()
 

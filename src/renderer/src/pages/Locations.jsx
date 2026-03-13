@@ -1,7 +1,8 @@
-import { MapPin, List, Check, Archive } from 'lucide-react'
+import { MapPin, List, Check, Archive, Edit } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import ConfirmModal from '../components/ConfirmModal'
 import { showError, showSuccess } from '../utils/toast'
+import UpdateNameModal from '../components/UpdateNameModal'
 
 export default function Locations() {
   const [upazila, setUpazila] = useState('')
@@ -18,6 +19,9 @@ export default function Locations() {
   const [selectedUpazilaId, setSelectedUpazilaId] = useState(null)
   const [selectedMouzaId, setSelectedMouzaId] = useState(null)
   const [selectedVolumeId, setSelectedVolumeId] = useState(null)
+  const [updateUpazilaOpen, setUpdateUpazilaOpen] = useState(false)
+  const [updateMouzaOpen, setUpdateMouzaOpen] = useState(false)
+  const [updateVolumeOpen, setUpdateVolumeOpen] = useState(false)
 
   const loadUpazilas = async () => {
     const data = await window.api.getUpazilas()
@@ -119,7 +123,7 @@ export default function Locations() {
             const result = await window.api.deleteVolume(selectedVolumeId)
 
             if (result?.success) {
-              loadVolumes(selectedUpazila)
+              loadVolumes(selectedUpazilaVolume)
               showSuccess('Volume deleted')
             } else {
               showError('Failed to delete volume')
@@ -130,6 +134,99 @@ export default function Locations() {
           } finally {
             setConfirmVolume(false)
           }
+        }}
+      />
+
+      {/* Update Modals */}
+      <UpdateNameModal
+        isOpen={updateUpazilaOpen}
+        title="Update Upazila"
+        initialValue={upazilas.find((u) => u.id === selectedUpazilaId)?.name || ''}
+        onCancel={() => setUpdateUpazilaOpen(false)}
+        onConfirm={async (value) => {
+          try {
+            const result = await window.api.updateUpazila({ id: selectedUpazilaId, name: value })
+
+            if (result?.success) {
+              loadUpazilas()
+              showSuccess('Upazila updated')
+            } else {
+              showError('Failed to update upazila')
+            }
+          } catch (err) {
+            console.error(err)
+            showError('Failed to update upazila')
+          } finally {
+            setUpdateUpazilaOpen(false)
+          }
+        }}
+        onDelete={() => {
+          setUpdateUpazilaOpen(false)
+          setConfirmUpazila(true)
+        }}
+      />
+
+      <UpdateNameModal
+        isOpen={updateMouzaOpen}
+        title="Update Mouza"
+        initialValue={mouzas.find((m) => m.id === selectedMouzaId)?.name || ''}
+        onCancel={() => setUpdateMouzaOpen(false)}
+        onConfirm={async (value) => {
+          try {
+            const result = await window.api.updateMouza({
+              id: selectedMouzaId,
+              name: value,
+              upazilaId: selectedUpazila
+            })
+
+            if (result?.success) {
+              loadMouzas(selectedUpazila)
+              showSuccess('Mouza updated')
+            } else {
+              showError('Failed to update mouza')
+            }
+          } catch (err) {
+            console.error(err)
+            showError('Failed to update mouza')
+          } finally {
+            setUpdateMouzaOpen(false)
+          }
+        }}
+        onDelete={() => {
+          setUpdateMouzaOpen(false)
+          setConfirmMouza(true)
+        }}
+      />
+
+      <UpdateNameModal
+        isOpen={updateVolumeOpen}
+        title="Update Volume"
+        initialValue={volumes.find((v) => v.id === selectedVolumeId)?.name || ''}
+        onCancel={() => setUpdateVolumeOpen(false)}
+        onConfirm={async (value) => {
+          try {
+            const result = await window.api.updateVolume({
+              id: selectedVolumeId,
+              name: value,
+              upazilaId: selectedUpazilaVolume
+            })
+
+            if (result?.success) {
+              loadVolumes(selectedUpazilaVolume)
+              showSuccess('Volume updated')
+            } else {
+              showError('Failed to update volume')
+            }
+          } catch (err) {
+            console.error(err)
+            showError('Failed to update volume')
+          } finally {
+            setUpdateVolumeOpen(false)
+          }
+        }}
+        onDelete={() => {
+          setUpdateVolumeOpen(false)
+          setConfirmVolume(true)
         }}
       />
 
@@ -211,14 +308,14 @@ export default function Locations() {
                     {upazilas.map((item, index) => (
                       <div
                         key={index}
-                        className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm border border-gray-200 cursor-pointer"
+                        className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm border border-gray-200 cursor-pointer hover:bg-gray-200"
                         onClick={() => {
                           setSelectedUpazilaId(item.id)
-                          setConfirmUpazila(true)
+                          setUpdateUpazilaOpen(true)
                         }}
                       >
-                        <Check size={14} className="text-gray-600" />
                         <span>{item.name}</span>
+                        <Edit size={14} className="text-gray-500" />
                       </div>
                     ))}
                   </div>
@@ -309,13 +406,14 @@ export default function Locations() {
                     {mouzas.map((m) => (
                       <div
                         key={m.id}
-                        className="px-3 py-2 bg-orange-50 text-orange-700 rounded text-sm border border-orange-200 cursor-pointer"
+                        className="flex items-center gap-2 px-3 py-2 bg-orange-50 text-orange-700 rounded text-sm border border-orange-200 cursor-pointer hover:bg-orange-100"
                         onClick={() => {
                           setSelectedMouzaId(m.id)
-                          setConfirmMouza(true)
+                          setUpdateMouzaOpen(true)
                         }}
                       >
-                        {m.name}
+                        <span>{m.name}</span>
+                        <Edit size={14} className="text-orange-500" />
                       </div>
                     ))}
                   </div>
@@ -409,13 +507,14 @@ export default function Locations() {
                     {volumes.map((v) => (
                       <div
                         key={v.id}
-                        className="px-3 py-2 bg-blue-50 text-blue-700 rounded text-sm border border-blue-200 cursor-pointer"
+                        className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded text-sm border border-blue-200 cursor-pointer hover:bg-blue-100"
                         onClick={() => {
                           setSelectedVolumeId(v.id)
-                          setConfirmVolume(true)
+                          setUpdateVolumeOpen(true)
                         }}
                       >
-                        {v.name}
+                        <span>{v.name}</span>
+                        <Edit size={14} className="text-blue-500" />
                       </div>
                     ))}
                   </div>

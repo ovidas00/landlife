@@ -130,7 +130,9 @@ export default function UpdateDocument() {
       docType,
       remarks,
       newFiles: files, // files added in this session
-      existingFiles // files to keep
+      existingFiles, // files to keep
+      previousDocumentId: previousDocument?.id,
+      nextDocumentId: nextDocument?.id
     }
 
     try {
@@ -139,7 +141,7 @@ export default function UpdateDocument() {
       if (result?.success) {
         showSuccess('Document updated successfully')
       } else {
-        showError('Update failed')
+        showError(result?.message ? `Upload Failed: ${result?.message}` : 'Upload Failed')
       }
     } catch (err) {
       console.error(err)
@@ -177,6 +179,14 @@ export default function UpdateDocument() {
     }
   }
 
+  const handleClear = () => {
+    if (actionReletion === 'previous') {
+      setPreviousDocument(null)
+    } else {
+      setNextDocument(null)
+    }
+  }
+
   return (
     <>
       {/* Confirm modal */}
@@ -205,6 +215,7 @@ export default function UpdateDocument() {
         isOpen={inputModalOpen}
         onClose={() => setInputModalOpen(false)}
         onSubmit={handleSearchDocument}
+        onClear={handleClear}
       />
 
       <div className="bg-gray-100 p-8">

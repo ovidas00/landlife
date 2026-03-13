@@ -235,3 +235,29 @@ function countFilesList(files) {
   }
   return count
 }
+
+export function isValidPosition(previousId, nextId, db) {
+  if (!previousId || !nextId) return true // one or both ends are null → always valid
+
+  // Walk the chain from previousId to the end
+  let current = db
+    .prepare('SELECT id, next_document_id FROM documents WHERE id = ?')
+    .get(previousId)
+  const visited = new Set()
+
+  while (current) {
+    if (visited.has(current.id)) return false // safety against cycles
+    visited.add(current.id)
+
+    if (current.id === nextId) return true // previousId comes before nextId → valid
+
+    current = current.next_document_id
+      ? db
+          .prepare('SELECT id, next_document_id FROM documents WHERE id = ?')
+          .get(current.next_document_id)
+      : null
+  }
+
+  // Reached the end without seeing nextId → invalid
+  return false
+}
