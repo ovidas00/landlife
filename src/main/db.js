@@ -4,7 +4,7 @@ import { getDocumentFolder } from './utils'
 
 let db
 
-export async function getDB() {
+export function getDB() {
   if (!db) {
     const dbPath = join(getDocumentFolder(), 'app.db')
     db = new Database(dbPath)

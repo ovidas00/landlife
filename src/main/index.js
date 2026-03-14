@@ -49,14 +49,12 @@ function createWindow() {
   }
 }
 
-let db // global variable
+const db = getDB() // Initialize db
 
-async function initApp() {
-  db = await getDB()
-
-  // Your app setup
-  electronApp.setAppUserModelId('com.edulife.landlife')
-
+// This method will be called when Electron has finished
+app.whenReady().then(() => {
+  // Set app user model id for windows
+  electronApp.setAppUserModelId('com.edulife.dcoffice')
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -66,9 +64,7 @@ async function initApp() {
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
-}
-
-app.whenReady().then(initApp)
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -280,7 +276,6 @@ ipcMain.handle('upload-document', async (event, payload) => {
   } = payload
 
   const baseDir = join(getDocumentFolder(), 'documents')
-  if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
 
   // Prevent invalid cycle
   if (previousDocumentId && nextDocumentId && previousDocumentId === nextDocumentId) {
@@ -388,7 +383,11 @@ ipcMain.handle('upload-document', async (event, payload) => {
       for (const file of files || []) {
         const filename = `${Date.now()}-${file.name}`
         const filePath = join(baseDir, filename)
-        fs.writeFileSync(filePath, Buffer.from(file.buffer))
+
+        const buffer = Buffer.from(file.buffer)
+
+        fs.writeFileSync(filePath, buffer)
+
         fileStmt.run(documentId, file.name, filePath)
       }
 
@@ -727,10 +726,15 @@ ipcMain.handle('update-document', async (event, payload) => {
         INSERT INTO document_files (document_id, file_name, file_path)
         VALUES (?, ?, ?)
       `)
-      for (const file of newFiles) {
+
+      for (const file of newFiles || []) {
         const filename = `${Date.now()}-${file.name}`
         const filePath = join(baseDir, filename)
-        fs.writeFileSync(filePath, Buffer.from(file.buffer))
+
+        const buffer = Buffer.from(file.buffer)
+
+        fs.writeFileSync(filePath, buffer)
+
         fileStmt.run(id, file.name, filePath)
       }
 
@@ -751,11 +755,13 @@ ipcMain.handle('delete-document', async (event, documentId) => {
     .all(documentId)
 
   for (const file of files) {
-    if (fs.existsSync(file.file_path)) {
+    const path = join(getDocumentFolder(), 'documents', basename(file.file_path))
+
+    if (fs.existsSync(path)) {
       try {
-        fs.unlinkSync(file.file_path)
+        fs.unlinkSync(path)
       } catch (err) {
-        console.error(`Failed to delete file ${file.file_path}:`, err)
+        console.error(`Failed to delete file ${path}:`, err)
       }
     }
   }
