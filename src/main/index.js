@@ -711,8 +711,10 @@ ipcMain.handle('update-document', async (event, payload) => {
         .filter((f) => !keepIds.includes(f.id))
 
       for (const f of filesToDelete) {
+        const path = join(getDocumentFolder(), 'documents', basename(f.file_path))
+
         try {
-          if (fs.existsSync(f.file_path)) fs.unlinkSync(f.file_path)
+          if (fs.existsSync(path)) fs.unlinkSync(path)
         } catch {
           // Ignore
         }
