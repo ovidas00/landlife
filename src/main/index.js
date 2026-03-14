@@ -625,6 +625,13 @@ ipcMain.handle('update-document', async (event, payload) => {
     return { success: false, message: 'Previous and next document cannot be the same' }
   }
 
+  if (previousDocumentId === id || nextDocumentId === id) {
+    return {
+      success: false,
+      message: 'Previous or next document cannot be the same as the current document'
+    }
+  }
+
   if (previousDocumentId && nextDocumentId) {
     const valid = isValidPosition(previousDocumentId, nextDocumentId, db)
     if (!valid) {
