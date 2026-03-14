@@ -167,6 +167,7 @@ export default function RecordsSearch() {
           ...(selectedMouza && { mouzaId: selectedMouza }),
           ...(selectedVolume && { volumeId: selectedVolume })
         }}
+        totalRows={total}
       />
 
       <div className="bg-gray-100 p-8">
