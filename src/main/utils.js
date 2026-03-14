@@ -17,7 +17,9 @@ import {
   TableCell,
   TableRow,
   WidthType,
-  AlignmentType
+  AlignmentType,
+  PageOrientation,
+  TableLayoutType
 } from 'docx'
 
 export function getDocumentFolder() {
@@ -404,13 +406,18 @@ export async function exportToWord({ data = [], outDir }) {
       children: headers.map(
         (h) =>
           new TableCell({
-            width: { size: 100 / headers.length, type: WidthType.PERCENTAGE },
             children: [
-              new Paragraph({ text: h, alignment: AlignmentType.CENTER, spacing: { after: 100 } })
+              new Paragraph({
+                text: h,
+                bold: true,
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 100 }
+              })
             ]
           })
       )
     })
+
     tableRows.push(headerRow)
 
     // Data rows
@@ -419,10 +426,16 @@ export async function exportToWord({ data = [], outDir }) {
         children: headers.map(
           (h) =>
             new TableCell({
-              children: [new Paragraph({ text: row[h]?.toString() || '', spacing: { after: 50 } })]
+              children: [
+                new Paragraph({
+                  text: row[h]?.toString() || '',
+                  spacing: { after: 50 }
+                })
+              ]
             })
         )
       })
+
       tableRows.push(tr)
     })
 
@@ -430,16 +443,37 @@ export async function exportToWord({ data = [], outDir }) {
     const doc = new Document({
       sections: [
         {
-          properties: {},
+          properties: {
+            page: {
+              size: {
+                orientation: PageOrientation.LANDSCAPE
+              }
+            }
+          },
           children: [
             new Paragraph({
-              text: 'Documents Export',
+              text: 'Documents',
               heading: 'Heading1',
-              alignment: AlignmentType.CENTER
+              alignment: AlignmentType.CENTER,
+              border: {
+                bottom: {
+                  color: 'auto',
+                  space: 1,
+                  value: 'single',
+                  size: 6
+                }
+              },
+              spacing: {
+                after: 300
+              }
             }),
             new Table({
               rows: tableRows,
-              width: { size: 100, type: WidthType.PERCENTAGE }
+              width: {
+                size: 100,
+                type: WidthType.PERCENTAGE
+              },
+              layout: TableLayoutType.AUTOFIT
             })
           ]
         }

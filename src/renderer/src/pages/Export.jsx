@@ -121,7 +121,7 @@ export default function ExportPage() {
                         </span>
 
                         <span className={`text-sm ${hasData ? 'text-gray-600' : 'text-gray-400'}`}>
-                          {upazila.files} Files
+                          {upazila.files + 1} Files
                         </span>
                       </div>
 
