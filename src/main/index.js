@@ -1026,7 +1026,7 @@ ipcMain.handle('get-document-tree', async (event, rootId) => {
 })
 
 ipcMain.handle('export-documents', async (event, filters) => {
-  const { format, upazilaId, mouzaId, volumeId, docType, searchQuery } = filters
+  const { format, upazilaId, mouzaId, volumeId, docType, searchQuery, rows } = filters
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
 
   const defaultName =
@@ -1092,6 +1092,7 @@ ipcMain.handle('export-documents', async (event, filters) => {
       LEFT JOIN volumes v ON d.volume_id = v.id
       ${whereClause}
       ORDER BY d.id DESC
+      LIMIT ${rows}
       `
     )
     .all(...params)
