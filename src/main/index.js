@@ -276,6 +276,7 @@ ipcMain.handle('upload-document', async (event, payload) => {
   } = payload
 
   const baseDir = join(getDocumentFolder(), 'documents')
+  if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
 
   // Prevent invalid cycle
   if (previousDocumentId && nextDocumentId && previousDocumentId === nextDocumentId) {
