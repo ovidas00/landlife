@@ -20,7 +20,7 @@ contextBridge.exposeInMainWorld('api', {
     const files = await Promise.all(
       data.files.map(async (f) => ({
         name: f.name,
-        buffer: Array.from(new Uint8Array(await f.arrayBuffer()))
+        buffer: await f.arrayBuffer()
       }))
     )
 
@@ -35,7 +35,7 @@ contextBridge.exposeInMainWorld('api', {
     const filesWithBuffer = await Promise.all(
       newFiles.map(async (f) => ({
         name: f.name,
-        buffer: Array.from(new Uint8Array(await f.arrayBuffer()))
+        buffer: await f.arrayBuffer()
       }))
     )
 

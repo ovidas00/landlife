@@ -384,11 +384,7 @@ ipcMain.handle('upload-document', async (event, payload) => {
       for (const file of files || []) {
         const filename = `${Date.now()}-${file.name}`
         const filePath = join(baseDir, filename)
-
-        const buffer = Buffer.from(file.buffer)
-
-        fs.writeFileSync(filePath, buffer)
-
+        fs.writeFileSync(filePath, Buffer.from(file.buffer))
         fileStmt.run(documentId, file.name, filePath)
       }
 
@@ -728,14 +724,10 @@ ipcMain.handle('update-document', async (event, payload) => {
         VALUES (?, ?, ?)
       `)
 
-      for (const file of newFiles || []) {
+      for (const file of newFiles) {
         const filename = `${Date.now()}-${file.name}`
         const filePath = join(baseDir, filename)
-
-        const buffer = Buffer.from(file.buffer)
-
-        fs.writeFileSync(filePath, buffer)
-
+        fs.writeFileSync(filePath, Buffer.from(file.buffer))
         fileStmt.run(id, file.name, filePath)
       }
 
