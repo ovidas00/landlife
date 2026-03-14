@@ -188,9 +188,7 @@ export default function RecordsSearch() {
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 {/* Upazila */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Upazila (উপজেলা)
-                  </label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Upazila</label>
                   <select
                     value={selectedUpazila}
                     onChange={(e) => setSelectedUpazila(e.target.value)}
@@ -207,9 +205,7 @@ export default function RecordsSearch() {
 
                 {/* Mouza */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Mouza (মৌজা)
-                  </label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Mouza</label>
                   <select
                     value={selectedMouza}
                     onChange={(e) => setSelectedMouza(e.target.value)}
@@ -226,9 +222,7 @@ export default function RecordsSearch() {
 
                 {/* Volume */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Volume (ভলিউম)
-                  </label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Volume</label>
                   <select
                     value={selectedVolume}
                     onChange={(e) => setSelectedVolume(e.target.value)}
