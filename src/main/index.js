@@ -1024,7 +1024,6 @@ WITH RECURSIVE document_tree(
 SELECT dt.id, dt.khatian_no, dt.holding_no, dt.dag_no, v.name AS volumeName
 FROM document_tree dt
 LEFT JOIN volumes v ON dt.volume_id = v.id
-ORDER BY dt.id;
   `
     )
     .all(rootId)
