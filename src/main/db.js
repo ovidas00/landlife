@@ -71,8 +71,8 @@ export function getDB() {
         FOREIGN KEY (mouza_id) REFERENCES mouzas(id) ON DELETE RESTRICT,
         FOREIGN KEY (volume_id) REFERENCES volumes(id) ON DELETE RESTRICT,
 
-        FOREIGN KEY (previous_document_id) REFERENCES documents(id) ON DELETE SET NULL,
-        FOREIGN KEY (next_document_id) REFERENCES documents(id) ON DELETE SET NULL
+        FOREIGN KEY (previous_document_id) REFERENCES documents(id) ON DELETE RESTRICT,
+        FOREIGN KEY (next_document_id) REFERENCES documents(id) ON DELETE RESTRICT
       )
       `
     ).run()
@@ -87,6 +87,48 @@ export function getDB() {
         file_path TEXT NOT NULL,
         FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
       )
+    `
+    ).run()
+
+    // -------- Indexes --------
+
+    // mouzas -> upazila
+    db.prepare(
+      `
+      CREATE INDEX IF NOT EXISTS idx_mouzas_upazila_id
+      ON mouzas(upazila_id)
+    `
+    ).run()
+
+    // volumes -> upazila
+    db.prepare(
+      `
+      CREATE INDEX IF NOT EXISTS idx_volumes_upazila_id
+      ON volumes(upazila_id)
+    `
+    ).run()
+
+    // documents location filtering
+    db.prepare(
+      `
+      CREATE INDEX IF NOT EXISTS idx_documents_location
+      ON documents(upazila_id, mouza_id, volume_id)
+    `
+    ).run()
+
+    // document chain lookup
+    db.prepare(
+      `
+      CREATE INDEX IF NOT EXISTS idx_documents_previous_document_id
+      ON documents(previous_document_id)
+    `
+    ).run()
+
+    // document files lookup
+    db.prepare(
+      `
+      CREATE INDEX IF NOT EXISTS idx_document_files_document_id
+      ON document_files(document_id)
     `
     ).run()
   }

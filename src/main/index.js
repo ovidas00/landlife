@@ -466,7 +466,6 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
 
   // Helper: compute relation_count per chain
   function assignRelationCount() {
-    // find all roots in this page (previous_document_id not in map OR null)
     const roots = documents.filter(
       (d) => !d.previous_document_id || !docMap.has(d.previous_document_id)
     )
@@ -474,12 +473,24 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
     for (const root of roots) {
       let chain = []
       let current = docMap.get(root.id)
+      const visited = new Set()
+
       while (current) {
+        // detect circular relationship
+        if (visited.has(current.id)) {
+          // circular detected → set relation_count = 0
+          chain.forEach((c) => (c.relation_count = 0))
+          chain = []
+          break
+        }
+
+        visited.add(current.id)
         chain.push(current)
+
         current = current.next_document_id ? docMap.get(current.next_document_id) : null
       }
 
-      // assign descending relation_count
+      // normal case
       for (let i = 0; i < chain.length; i++) {
         chain[i].relation_count = chain.length - i - 1
       }
@@ -1013,15 +1024,23 @@ ipcMain.handle('get-document-tree', async (event, rootId) => {
   if (!rootId) throw new Error('Document ID is required')
 
   const chain = []
+  const visited = new Set()
   let currentId = rootId
 
   while (currentId) {
-    const doc = db.prepare('SELECT * FROM documents WHERE id = ?').get(currentId)
+    // detect circular reference
+    if (visited.has(currentId)) {
+      console.warn('Circular document relationship detected at ID:', currentId)
+      break
+    }
 
+    visited.add(currentId)
+
+    const doc = db.prepare('SELECT * FROM documents WHERE id = ?').get(currentId)
     if (!doc) break
 
     chain.push(doc)
-    currentId = doc.next_document_id // move to next
+    currentId = doc.next_document_id
   }
 
   return chain
