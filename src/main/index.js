@@ -1157,7 +1157,7 @@ ipcMain.handle('export-documents', async (event, filters) => {
 
       const success = await exportToPDF({
         tableData,
-        columnWidths: [40, '*', 60, 60, 70, 50, 55, 55],
+        columnWidths: [40, '*', 60, 60, 80, 50, 55, 55],
         outDir: filePath
       })
 
@@ -1276,7 +1276,7 @@ ORDER BY dt.id
   try {
     const success = await exportToPDF({
       tableData,
-      columnWidths: [40, '*', 60, 60, 70, 50, 55, 55],
+      columnWidths: [40, '*', 60, 60, 80, 50, 55, 55],
       outDir: filePath
     })
 
