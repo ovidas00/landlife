@@ -215,6 +215,8 @@ export default function UpdateDocument() {
         isOpen={inputModalOpen}
         onClose={() => setInputModalOpen(false)}
         onSubmit={handleSearchDocument}
+        upazilaId={selectedUpazila}
+        mouzaId={mouza}
         onClear={handleClear}
       />
 

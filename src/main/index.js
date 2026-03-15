@@ -810,7 +810,6 @@ ipcMain.handle('get-dashboard-state', async () => {
       FROM upazilas u
       LEFT JOIN documents d ON d.upazila_id = u.id
       GROUP BY u.id
-      ORDER BY u.name
     `
     )
     .all()
