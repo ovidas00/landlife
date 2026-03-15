@@ -60,5 +60,6 @@ contextBridge.exposeInMainWorld('api', {
   findDocument: (payload) => ipcRenderer.invoke('find-document', payload),
   getDocumentTree: (rootDocumentId) => ipcRenderer.invoke('get-document-tree', rootDocumentId),
 
-  exportDocuments: (filters) => ipcRenderer.invoke('export-documents', filters)
+  exportDocuments: (filters) => ipcRenderer.invoke('export-documents', filters),
+  exportDocumentTree: (rootId) => ipcRenderer.invoke('export-document-tree', rootId)
 })

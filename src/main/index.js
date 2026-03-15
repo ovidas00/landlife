@@ -1149,7 +1149,9 @@ ipcMain.handle('export-documents', async (event, filters) => {
           d.khatian_no || 'N/A',
           d.holding_no || 'N/A',
           d.dag_no || 'N/A',
-          d.doc_type.charAt(0).toUpperCase() + d.doc_type.slice(1)
+          d.doc_type
+            ? d.doc_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+            : 'N/A'
         ])
       ]
 
@@ -1161,6 +1163,124 @@ ipcMain.handle('export-documents', async (event, filters) => {
 
       return { success }
     }
+  } catch (err) {
+    console.error('Export failed:', err)
+    return { success: false }
+  }
+})
+
+ipcMain.handle('export-document-tree', async (event, rootId) => {
+  if (!rootId) throw new Error('Document ID is required')
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+
+  const defaultName = `document-tree-${rootId}-${timestamp}.pdf`
+
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    title: 'Save document tree',
+    defaultPath: join(app.getPath('downloads'), defaultName)
+  })
+
+  if (canceled || !filePath) return { success: false }
+
+  // Recursive query to get the chain
+  const documents = db
+    .prepare(
+      `
+WITH RECURSIVE document_tree(
+    id,
+    upazila_id,
+    mouza_id,
+    volume_id,
+    khatian_no,
+    holding_no,
+    dag_no,
+    doc_type,
+    remarks,
+    created_at,
+    updated_at,
+    next_document_id,
+    path
+) AS (
+    SELECT
+        id,
+        upazila_id,
+        mouza_id,
+        volume_id,
+        khatian_no,
+        holding_no,
+        dag_no,
+        doc_type,
+        remarks,
+        created_at,
+        updated_at,
+        next_document_id,
+        printf('|%d|', id)
+    FROM documents
+    WHERE id = ?
+
+    UNION ALL
+
+    SELECT
+        d.id,
+        d.upazila_id,
+        d.mouza_id,
+        d.volume_id,
+        d.khatian_no,
+        d.holding_no,
+        d.dag_no,
+        d.doc_type,
+        d.remarks,
+        d.created_at,
+        d.updated_at,
+        d.next_document_id,
+        dt.path || d.id || '|'
+    FROM document_tree dt
+    JOIN documents d ON dt.next_document_id = d.id
+    WHERE instr(dt.path, printf('|%d|', d.id)) = 0
+)
+
+SELECT
+  dt.*,
+  u.name AS upazilaName,
+  m.name AS mouzaName,
+  v.name AS volumeName
+FROM document_tree dt
+LEFT JOIN upazilas u ON dt.upazila_id = u.id
+LEFT JOIN mouzas m ON dt.mouza_id = m.id
+LEFT JOIN volumes v ON dt.volume_id = v.id
+ORDER BY dt.id
+`
+    )
+    .all(rootId)
+
+  if (!documents.length) {
+    return { success: false, message: 'No related documents found.' }
+  }
+
+  // Format for PDF
+  const tableData = [
+    ['#', 'Upazila', 'Mouza', 'Volume', 'Khatian', 'Holding', 'Plot', 'Type'],
+    ...documents.map((d) => [
+      d.id,
+      d.upazilaName,
+      d.mouzaName,
+      d.volumeName,
+      d.khatian_no || 'N/A',
+      d.holding_no || 'N/A',
+      d.dag_no || 'N/A',
+      d.doc_type ? d.doc_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : 'N/A'
+    ])
+  ]
+
+  try {
+    const success = await exportToPDF({
+      tableData,
+      columnWidths: [40, '*', 60, 60, 60, 50, 55, 55],
+      outDir: filePath
+    })
+
+    return { success }
   } catch (err) {
     console.error('Export failed:', err)
     return { success: false }

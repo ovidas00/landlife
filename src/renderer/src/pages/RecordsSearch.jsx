@@ -23,6 +23,7 @@ export default function RecordsSearch() {
   const [treeOpen, setTreeOpen] = useState(false)
   const [documentTree, setDocumentTree] = useState(null)
   const [isExportOpen, setIsExportOpen] = useState(false)
+  const [selectedRootId, setSelectedRootId] = useState(null)
 
   // Pagination state
   const [page, setPage] = useState(1)
@@ -155,7 +156,12 @@ export default function RecordsSearch() {
         }}
       />
 
-      <TreeViewModal isOpen={treeOpen} onClose={() => setTreeOpen(false)} tree={documentTree} />
+      <TreeViewModal
+        isOpen={treeOpen}
+        onClose={() => setTreeOpen(false)}
+        tree={documentTree}
+        rootId={selectedRootId}
+      />
 
       <ExportModal
         isOpen={isExportOpen}
@@ -374,6 +380,7 @@ export default function RecordsSearch() {
                             className="inline-flex items-center gap-2 px-2 py-2 border border-gray-300 rounded text-sm whitespace-nowrap"
                             onClick={async () => {
                               const tree = await window.api.getDocumentTree(record.id)
+                              setSelectedRootId(record.id)
                               setDocumentTree(tree)
                               setTreeOpen(true)
                             }}

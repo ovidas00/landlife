@@ -1,7 +1,10 @@
-import { useEffect } from 'react'
-import { X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Download, X } from 'lucide-react'
+import { showError, showSuccess } from '../utils/toast'
 
-export default function TreeViewModal({ tree = [], isOpen, onClose }) {
+export default function TreeViewModal({ tree = [], isOpen, onClose, rootId }) {
+  const [docRootId, setDocRootId] = useState(null)
+
   useEffect(() => {
     if (!isOpen) return
 
@@ -12,6 +15,12 @@ export default function TreeViewModal({ tree = [], isOpen, onClose }) {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, onClose])
+
+  useEffect(() => {
+    if (rootId) {
+      setDocRootId(rootId)
+    }
+  }, [rootId])
 
   if (!isOpen) return null
 
@@ -59,9 +68,28 @@ export default function TreeViewModal({ tree = [], isOpen, onClose }) {
         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Document Tree</h2>
 
-          <button onClick={onClose} className="p-2 rounded hover:bg-gray-100">
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              className="p-2 rounded hover:bg-gray-100 text-gray-700"
+              title="Export Tree"
+              onClick={async () => {
+                try {
+                  const res = await window.api.exportDocumentTree(docRootId)
+
+                  if (res.success) showSuccess('Exported successfully!')
+                  else showError(`Failed to export${res.message ? `: ${res.message}` : ''}`)
+                } catch (err) {
+                  showError('Export error: ' + err.message)
+                }
+              }}
+            >
+              <Download size={20} />
+            </button>
+
+            <button onClick={onClose} className="p-2 rounded hover:bg-gray-100">
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Body */}
