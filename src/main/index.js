@@ -438,69 +438,48 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
   const documents = db
     .prepare(
       `
-      SELECT 
-        d.*,
-        u.name AS upazilaName,
-        m.name AS mouzaName,
-        v.name AS volumeName,
-        COALESCE(f.files, '') AS files
-      FROM documents d
-      LEFT JOIN upazilas u ON d.upazila_id = u.id
-      LEFT JOIN mouzas m ON d.mouza_id = m.id
-      LEFT JOIN volumes v ON d.volume_id = v.id
-      LEFT JOIN (
-        SELECT document_id,
-          GROUP_CONCAT(id || '::' || file_name || '::' || file_path, '|') AS files
-        FROM document_files
-        GROUP BY document_id
-      ) f ON f.document_id = d.id
-      ${whereClause}
-      ORDER BY d.id DESC
-      LIMIT ? OFFSET ?
+      WITH RECURSIVE down_chain(root_id, next_id, path) AS (
+    -- start from each document
+    SELECT id AS root_id, next_document_id, printf('|%d|', id) AS path
+    FROM documents
+    WHERE next_document_id IS NOT NULL
+
+    UNION ALL
+
+    -- follow next_document_id only if not already in path
+    SELECT dc.root_id, d.next_document_id, dc.path || d.id || '|'
+    FROM down_chain dc
+    JOIN documents d ON dc.next_id = d.id
+    WHERE d.next_document_id IS NOT NULL
+      AND instr(dc.path, printf('|%d|', d.id)) = 0
+)
+SELECT d.*,
+       u.name AS upazilaName,
+       m.name AS mouzaName,
+       v.name AS volumeName,
+       COALESCE(f.files, '') AS files,
+       COUNT(dc.next_id) AS relation_count
+FROM documents d
+LEFT JOIN upazilas u ON d.upazila_id = u.id
+LEFT JOIN mouzas m ON d.mouza_id = m.id
+LEFT JOIN volumes v ON d.volume_id = v.id
+LEFT JOIN (
+    SELECT document_id,
+           GROUP_CONCAT(id || '::' || file_name || '::' || file_path, '|') AS files
+    FROM document_files
+    GROUP BY document_id
+) f ON f.document_id = d.id
+LEFT JOIN down_chain dc ON dc.root_id = d.id
+${whereClause}
+GROUP BY d.id
+ORDER BY d.id DESC
+LIMIT ? OFFSET ?;
     `
     )
     .all(...params, pageSize, offset)
 
-  // Build a map for quick lookups
-  const docMap = new Map(documents.map((d) => [d.id, { ...d, relation_count: 0 }]))
-
-  // Helper: compute relation_count per chain
-  function assignRelationCount() {
-    const roots = documents.filter(
-      (d) => !d.previous_document_id || !docMap.has(d.previous_document_id)
-    )
-
-    for (const root of roots) {
-      let chain = []
-      let current = docMap.get(root.id)
-      const visited = new Set()
-
-      while (current) {
-        // detect circular relationship
-        if (visited.has(current.id)) {
-          // circular detected → set relation_count = 0
-          chain.forEach((c) => (c.relation_count = 0))
-          chain = []
-          break
-        }
-
-        visited.add(current.id)
-        chain.push(current)
-
-        current = current.next_document_id ? docMap.get(current.next_document_id) : null
-      }
-
-      // normal case
-      for (let i = 0; i < chain.length; i++) {
-        chain[i].relation_count = chain.length - i - 1
-      }
-    }
-  }
-
-  assignRelationCount()
-
   // Parse files array
-  const result = Array.from(docMap.values()).map((doc) => {
+  const result = documents.map((doc) => {
     const files = doc.files
       ? doc.files.split('|').map((str) => {
           const [id, file_name, file_path] = str.split('::')
@@ -1023,25 +1002,33 @@ ipcMain.handle('find-document', async (event, payload) => {
 ipcMain.handle('get-document-tree', async (event, rootId) => {
   if (!rootId) throw new Error('Document ID is required')
 
-  const chain = []
-  const visited = new Set()
-  let currentId = rootId
+  // Recursive CTE to traverse the document chain safely
+  const chain = db
+    .prepare(
+      `
+WITH RECURSIVE document_tree(
+    id, khatian_no, holding_no, dag_no, volume_id, next_document_id, path
+) AS (
+    -- Start from the root document
+    SELECT id, khatian_no, holding_no, dag_no, volume_id, next_document_id, printf('|%d|', id) AS path
+    FROM documents
+    WHERE id = ?
 
-  while (currentId) {
-    // detect circular reference
-    if (visited.has(currentId)) {
-      console.warn('Circular document relationship detected at ID:', currentId)
-      break
-    }
+    UNION ALL
 
-    visited.add(currentId)
-
-    const doc = db.prepare('SELECT * FROM documents WHERE id = ?').get(currentId)
-    if (!doc) break
-
-    chain.push(doc)
-    currentId = doc.next_document_id
-  }
+    -- Follow next_document_id only if not already visited
+    SELECT d.id, d.khatian_no, d.holding_no, d.dag_no, d.volume_id, d.next_document_id, dt.path || d.id || '|'
+    FROM document_tree dt
+    JOIN documents d ON dt.next_document_id = d.id
+    WHERE instr(dt.path, printf('|%d|', d.id)) = 0
+)
+SELECT dt.id, dt.khatian_no, dt.holding_no, dt.dag_no, v.name AS volumeName
+FROM document_tree dt
+LEFT JOIN volumes v ON dt.volume_id = v.id
+ORDER BY dt.id;
+  `
+    )
+    .all(rootId)
 
   return chain
 })

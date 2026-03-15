@@ -23,7 +23,7 @@ export default function TreeViewModal({ tree = [], isOpen, onClose }) {
         <div className="bg-gray-50 border border-gray-200 rounded p-3 w-full">
           <div className="text-sm font-semibold text-gray-800 mb-1">Document #{node.id}</div>
 
-          <div className="grid grid-cols-3 text-sm text-gray-700 gap-2">
+          <div className="grid grid-cols-4 text-sm text-gray-700 gap-2">
             <div>
               <span className="font-medium">Khatian:</span> {node.khatian_no || '-'}
             </div>
@@ -34,6 +34,10 @@ export default function TreeViewModal({ tree = [], isOpen, onClose }) {
 
             <div>
               <span className="font-medium">Plot:</span> {node.dag_no || '-'}
+            </div>
+
+            <div>
+              <span className="font-medium">Volume:</span> {node.volumeName || '-'}
             </div>
           </div>
         </div>
