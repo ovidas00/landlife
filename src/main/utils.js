@@ -65,7 +65,6 @@ async function countFiles(dir) {
 }
 
 export async function backupFolder(sourceDir, outputArchive, password = null, webContents) {
-  // Determine 7zip binary
   const bin = app.isPackaged
     ? join(
         process.resourcesPath,
@@ -81,19 +80,11 @@ export async function backupFolder(sourceDir, outputArchive, password = null, we
     password: password || undefined
   }
 
-  // TEMP DB COPY
-  const tempDir = join(os.tmpdir(), `backup-temp-${Date.now()}`)
-  await fsp.mkdir(tempDir, { recursive: true })
-
-  const dbPath = join(sourceDir, 'app.db')
-  const tempDbPath = join(tempDir, 'app.db')
-  await fsp.copyFile(dbPath, tempDbPath)
-
-  // DOCUMENTS PATH
+  // DOCUMENTS ONLY (NO DB)
   const documentsPath = join(sourceDir, 'documents')
-  const items = [tempDbPath, documentsPath]
+  const items = [documentsPath]
 
-  const totalFiles = 1 + (await countFiles(documentsPath)) // 1 for DB
+  const totalFiles = await countFiles(documentsPath)
 
   return new Promise((resolve, reject) => {
     const archive = Seven.add(outputArchive, items, options)
@@ -111,21 +102,11 @@ export async function backupFolder(sourceDir, outputArchive, password = null, we
     })
 
     archive.on('end', async () => {
-      try {
-        await fsp.rm(tempDir, { recursive: true, force: true })
-      } catch (err) {
-        console.error('Failed to clean temp folder:', err)
-      }
       console.log(`Backup complete! Archive saved at: ${outputArchive}`)
       resolve()
     })
 
     archive.on('error', async (err) => {
-      try {
-        await fsp.rm(tempDir, { recursive: true, force: true })
-      } catch {
-        // Ignore
-      }
       console.error('Backup failed:', err)
       reject(err)
     })

@@ -2,7 +2,7 @@ import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join, basename } from 'node:path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { getDB } from './db'
+import { getDB, initDB } from './db'
 import fs from 'node:fs'
 import {
   backupFolder,
@@ -49,10 +49,14 @@ function createWindow() {
   }
 }
 
-const db = getDB() // Initialize db
+let db
 
 // This method will be called when Electron has finished
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await initDB()
+
+  db = getDB()
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.edulife.dcoffice')
   app.on('browser-window-created', (_, window) => {
@@ -72,26 +76,35 @@ app.on('window-all-closed', () => {
   }
 })
 
-ipcMain.handle('add-upazilla', async (event, name) => {
+ipcMain.handle('add-upazilla', async (_event, name) => {
   const normalizedName = name.trim()
-  const exists = db
-    .prepare('SELECT 1 FROM upazilas WHERE lower(name) = lower(?)')
-    .get(normalizedName)
 
-  if (exists) {
+  // check existence (case-insensitive)
+  const existsResult = await db.execute({
+    sql: 'SELECT 1 FROM upazilas WHERE lower(name) = lower(?) LIMIT 1',
+    args: [normalizedName]
+  })
+
+  if (existsResult.rows.length > 0) {
     return { success: false, message: 'Upazila already exists' }
   }
 
-  db.prepare('INSERT INTO upazilas (name) VALUES (?)').run(normalizedName)
+  // insert
+  await db.execute({
+    sql: 'INSERT INTO upazilas (name) VALUES (?)',
+    args: [normalizedName]
+  })
 
   return { success: true }
 })
 
 ipcMain.handle('get-upazilas', async () => {
-  const stmt = db.prepare('SELECT * FROM upazilas')
-  const rows = stmt.all()
+  const result = await db.execute({
+    sql: 'SELECT * FROM upazilas',
+    args: []
+  })
 
-  return rows
+  return result.rows
 })
 
 ipcMain.handle('update-upazila', async (event, { id, name }) => {
@@ -102,160 +115,190 @@ ipcMain.handle('update-upazila', async (event, { id, name }) => {
   }
 
   // Check if another upazila already has this name
-  const exists = db
-    .prepare('SELECT 1 FROM upazilas WHERE lower(name) = lower(?) AND id != ?')
-    .get(normalizedName, id)
+  const exists = await db.execute({
+    sql: 'SELECT 1 FROM upazilas WHERE lower(name) = lower(?) AND id != ? LIMIT 1',
+    args: [normalizedName, id]
+  })
 
-  if (exists) {
+  if (exists.rows.length > 0) {
     return { success: false, message: 'Upazila already exists' }
   }
 
-  db.prepare('UPDATE upazilas SET name = ? WHERE id = ?').run(normalizedName, id)
+  await db.execute({
+    sql: 'UPDATE upazilas SET name = ? WHERE id = ?',
+    args: [normalizedName, id]
+  })
 
   return { success: true }
 })
 
-ipcMain.handle('delete-upazila', (event, upazilaId) => {
-  db.prepare('DELETE FROM upazilas WHERE id = ?').run(upazilaId)
+ipcMain.handle('delete-upazila', async (event, upazilaId) => {
+  await db.execute({
+    sql: 'DELETE FROM upazilas WHERE id = ?',
+    args: [upazilaId]
+  })
 
   return { success: true }
 })
 
-ipcMain.handle('add-mouza', (event, name, upazilaId) => {
+ipcMain.handle('add-mouza', async (event, name, upazilaId) => {
   const normalizedName = name.trim()
-  const exists = db
-    .prepare(
-      `
-    SELECT 1
-    FROM mouzas
-    WHERE lower(name) = lower(?) AND upazila_id = ?
-  `
-    )
-    .get(normalizedName, upazilaId)
 
-  if (exists) {
+  const exists = await db.execute({
+    sql: `
+      SELECT 1
+      FROM mouzas
+      WHERE lower(name) = lower(?) AND upazila_id = ?
+      LIMIT 1
+    `,
+    args: [normalizedName, upazilaId]
+  })
+
+  if (exists.rows.length > 0) {
     return { success: false, message: 'Mouza already exists in this upazila' }
   }
 
-  db.prepare(
-    `
-    INSERT INTO mouzas (name, upazila_id)
-    VALUES (?, ?)
-  `
-  ).run(normalizedName, upazilaId)
+  await db.execute({
+    sql: `
+      INSERT INTO mouzas (name, upazila_id)
+      VALUES (?, ?)
+    `,
+    args: [normalizedName, upazilaId]
+  })
 
   return { success: true }
 })
 
-ipcMain.handle('get-mouzas', (event, upazilaId) => {
-  return db.prepare('SELECT * FROM mouzas WHERE upazila_id = ?').all(upazilaId)
+ipcMain.handle('get-mouzas', async (event, upazilaId) => {
+  const result = await db.execute({
+    sql: 'SELECT * FROM mouzas WHERE upazila_id = ?',
+    args: [upazilaId]
+  })
+
+  return result.rows
 })
 
-ipcMain.handle('update-mouza', (event, { id, name, upazilaId }) => {
+ipcMain.handle('update-mouza', async (event, { id, name, upazilaId }) => {
   const normalizedName = name.trim()
 
   if (!normalizedName) {
     return { success: false, message: 'Name is required' }
   }
 
-  // Check if another mouza in the same upazila has this name
-  const exists = db
-    .prepare(
-      `
+  const exists = await db.execute({
+    sql: `
       SELECT 1
       FROM mouzas
-      WHERE lower(name) = lower(?) AND upazila_id = ? AND id != ?
-      `
-    )
-    .get(normalizedName, upazilaId, id)
+      WHERE lower(name) = lower(?)
+        AND upazila_id = ?
+        AND id != ?
+      LIMIT 1
+    `,
+    args: [normalizedName, upazilaId, id]
+  })
 
-  if (exists) {
+  if (exists.rows.length > 0) {
     return { success: false, message: 'Mouza already exists in this upazila' }
   }
 
-  db.prepare(
-    `
-    UPDATE mouzas
-    SET name = ?, upazila_id = ?
-    WHERE id = ?
-    `
-  ).run(normalizedName, upazilaId, id)
+  await db.execute({
+    sql: `
+      UPDATE mouzas
+      SET name = ?, upazila_id = ?
+      WHERE id = ?
+    `,
+    args: [normalizedName, upazilaId, id]
+  })
 
   return { success: true }
 })
 
-ipcMain.handle('delete-mouza', (event, mouzaId) => {
-  db.prepare('DELETE FROM mouzas WHERE id = ?').run(mouzaId)
+ipcMain.handle('delete-mouza', async (event, mouzaId) => {
+  await db.execute({
+    sql: 'DELETE FROM mouzas WHERE id = ?',
+    args: [mouzaId]
+  })
 
   return { success: true }
 })
 
-ipcMain.handle('add-volume', (event, name, upazilaId) => {
+ipcMain.handle('add-volume', async (event, name, upazilaId) => {
   const normalizedName = name.trim()
-  const exists = db
-    .prepare(
-      `
+
+  const exists = await db.execute({
+    sql: `
       SELECT 1
       FROM volumes
       WHERE lower(name) = lower(?) AND upazila_id = ?
-    `
-    )
-    .get(normalizedName, upazilaId)
+      LIMIT 1
+    `,
+    args: [normalizedName, upazilaId]
+  })
 
-  if (exists) {
+  if (exists.rows.length > 0) {
     return { success: false, message: 'Volume already exists in this upazila' }
   }
 
-  db.prepare(
-    `
-    INSERT INTO volumes (name, upazila_id)
-    VALUES (?, ?)
-  `
-  ).run(normalizedName, upazilaId)
+  await db.execute({
+    sql: `
+      INSERT INTO volumes (name, upazila_id)
+      VALUES (?, ?)
+    `,
+    args: [normalizedName, upazilaId]
+  })
 
   return { success: true }
 })
 
 ipcMain.handle('get-volumes', async (event, upazilaId) => {
-  return db.prepare('SELECT * FROM volumes WHERE upazila_id = ?').all(upazilaId)
+  const result = await db.execute({
+    sql: 'SELECT * FROM volumes WHERE upazila_id = ?',
+    args: [upazilaId]
+  })
+
+  return result.rows
 })
 
-ipcMain.handle('update-volume', (event, { id, name, upazilaId }) => {
+ipcMain.handle('update-volume', async (event, { id, name, upazilaId }) => {
   const normalizedName = name.trim()
 
   if (!normalizedName) {
     return { success: false, message: 'Name is required' }
   }
 
-  // Check if another volume in the same upazila already has this name
-  const exists = db
-    .prepare(
-      `
+  const exists = await db.execute({
+    sql: `
       SELECT 1
       FROM volumes
-      WHERE lower(name) = lower(?) AND upazila_id = ? AND id != ?
-      `
-    )
-    .get(normalizedName, upazilaId, id)
+      WHERE lower(name) = lower(?)
+        AND upazila_id = ?
+        AND id != ?
+      LIMIT 1
+    `,
+    args: [normalizedName, upazilaId, id]
+  })
 
-  if (exists) {
+  if (exists.rows.length > 0) {
     return { success: false, message: 'Volume already exists in this upazila' }
   }
 
-  // Update the record
-  db.prepare(
-    `
-    UPDATE volumes
-    SET name = ?, upazila_id = ?
-    WHERE id = ?
-    `
-  ).run(normalizedName, upazilaId, id)
+  await db.execute({
+    sql: `
+      UPDATE volumes
+      SET name = ?, upazila_id = ?
+      WHERE id = ?
+    `,
+    args: [normalizedName, upazilaId, id]
+  })
 
   return { success: true }
 })
 
-ipcMain.handle('delete-volume', (event, volumeId) => {
-  db.prepare('DELETE FROM volumes WHERE id = ?').run(volumeId)
+ipcMain.handle('delete-volume', async (event, volumeId) => {
+  await db.execute({
+    sql: 'DELETE FROM volumes WHERE id = ?',
+    args: [volumeId]
+  })
 
   return { success: true }
 })
@@ -283,35 +326,39 @@ ipcMain.handle('upload-document', async (event, payload) => {
     return { success: false, message: 'Previous and next document cannot be the same' }
   }
 
-  function isValidPosition(previousId, nextId, db) {
-    if (!previousId || !nextId) return true // one or both ends are null → always valid
+  async function isValidPosition(previousId, nextId, db) {
+    if (!previousId || !nextId) return true
 
-    // Walk the chain from previousId to the end
-    let current = db
-      .prepare('SELECT id, next_document_id FROM documents WHERE id = ?')
-      .get(previousId)
+    let currentResult = await db.execute({
+      sql: 'SELECT id, next_document_id FROM documents WHERE id = ?',
+      args: [previousId]
+    })
+
+    let current = currentResult.rows[0]
     const visited = new Set()
 
     while (current) {
-      if (visited.has(current.id)) return false // safety against cycles
+      if (visited.has(current.id)) return false
       visited.add(current.id)
 
-      if (current.id === nextId) return true // previousId comes before nextId → valid
+      if (current.id === nextId) return true
 
-      current = current.next_document_id
-        ? db
-            .prepare('SELECT id, next_document_id FROM documents WHERE id = ?')
-            .get(current.next_document_id)
-        : null
+      if (!current.next_document_id) break
+
+      currentResult = await db.execute({
+        sql: 'SELECT id, next_document_id FROM documents WHERE id = ?',
+        args: [current.next_document_id]
+      })
+
+      current = currentResult.rows[0]
     }
 
-    // Reached the end without seeing nextId → invalid
     return false
   }
 
   // Prevent invalid sequence
   if (previousDocumentId && nextDocumentId) {
-    const valid = isValidPosition(previousDocumentId, nextDocumentId, db)
+    const valid = await isValidPosition(previousDocumentId, nextDocumentId, db)
     if (!valid) {
       return {
         success: false,
@@ -321,77 +368,73 @@ ipcMain.handle('upload-document', async (event, payload) => {
   }
 
   try {
-    const insertTransaction = db.transaction(() => {
-      // Insert the new document
-      const result = db
-        .prepare(
-          `
-        INSERT INTO documents
-        (
-          upazila_id,
-          mouza_id,
-          volume_id,
-          khatian_no,
-          dag_no,
-          holding_no,
-          doc_type,
-          remarks,
-          previous_document_id,
-          next_document_id,
-          created_at,
-          updated_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+6 hours'), datetime('now', '+6 hours'))
-        `
-        )
-        .run(
-          upazilaId,
-          mouzaId,
-          volumeId,
-          khatianNo,
-          dagNo,
-          holdingNo,
-          docType,
-          remarks,
-          previousDocumentId || null,
-          nextDocumentId || null
-        )
-
-      const documentId = result.lastInsertRowid
-
-      // Update the previous document's next_document_id
-      if (previousDocumentId) {
-        db.prepare(`UPDATE documents SET next_document_id = ? WHERE id = ?`).run(
-          documentId,
-          previousDocumentId
-        )
-      }
-
-      // Update the next document's previous_document_id
-      if (nextDocumentId) {
-        db.prepare(`UPDATE documents SET previous_document_id = ? WHERE id = ?`).run(
-          documentId,
-          nextDocumentId
-        )
-      }
-
-      // Save files
-      const fileStmt = db.prepare(`
-        INSERT INTO document_files (document_id, file_name, file_path)
-        VALUES (?, ?, ?)
-      `)
-
-      for (const file of files || []) {
-        const filename = `${Date.now()}-${file.name}`
-        const filePath = join(baseDir, filename)
-        fs.writeFileSync(filePath, Buffer.from(file.buffer))
-        fileStmt.run(documentId, file.name, filePath)
-      }
-
-      return documentId
+    // Insert document
+    const result = await db.execute({
+      sql: `
+      INSERT INTO documents
+      (
+        upazila_id,
+        mouza_id,
+        volume_id,
+        khatian_no,
+        dag_no,
+        holding_no,
+        doc_type,
+        remarks,
+        previous_document_id,
+        next_document_id,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+6 hours'), datetime('now', '+6 hours'))
+    `,
+      args: [
+        upazilaId,
+        mouzaId,
+        volumeId,
+        khatianNo,
+        dagNo,
+        holdingNo,
+        docType,
+        remarks,
+        previousDocumentId || null,
+        nextDocumentId || null
+      ]
     })
 
-    const documentId = insertTransaction()
+    const documentId = Number(result.lastInsertRowid)
+
+    // Update previous
+    if (previousDocumentId) {
+      await db.execute({
+        sql: `UPDATE documents SET next_document_id = ? WHERE id = ?`,
+        args: [documentId, previousDocumentId]
+      })
+    }
+
+    // Update next
+    if (nextDocumentId) {
+      await db.execute({
+        sql: `UPDATE documents SET previous_document_id = ? WHERE id = ?`,
+        args: [documentId, nextDocumentId]
+      })
+    }
+
+    // Save files
+    for (const file of files || []) {
+      const filename = `${Date.now()}-${file.name}`
+      const filePath = join(baseDir, filename)
+      fs.writeFileSync(filePath, Buffer.from(file.buffer))
+
+      await db.execute({
+        sql: `
+        INSERT INTO document_files (document_id, file_name, file_path)
+        VALUES (?, ?, ?)
+      `,
+        args: [documentId, file.name, filePath]
+      })
+    }
+
     return { success: true, documentId }
   } catch (err) {
     console.error('Error uploading document:', err)
@@ -401,6 +444,7 @@ ipcMain.handle('upload-document', async (event, payload) => {
 
 ipcMain.handle('get-documents', async (event, filters = {}) => {
   const { upazilaId, mouzaId, volumeId, docType, searchQuery, page = 1, pageSize = 50 } = filters
+
   const offset = (page - 1) * pageSize
 
   const conditions = []
@@ -435,74 +479,85 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
   // Fetch documents
-  const documents = db
-    .prepare(
-      `
+  const documentsResult = await db.execute({
+    sql: `
       WITH RECURSIVE down_chain(root_id, next_id, path) AS (
-    -- start from each document
-    SELECT id AS root_id, next_document_id, printf('|%d|', id) AS path
-    FROM documents
-    WHERE next_document_id IS NOT NULL
+        SELECT id AS root_id, next_document_id, printf('|%d|', id) AS path
+        FROM documents
+        WHERE next_document_id IS NOT NULL
 
-    UNION ALL
+        UNION ALL
 
-    -- follow next_document_id only if not already in path
-    SELECT dc.root_id, d.next_document_id, dc.path || d.id || '|'
-    FROM down_chain dc
-    JOIN documents d ON dc.next_id = d.id
-    WHERE d.next_document_id IS NOT NULL
-      AND instr(dc.path, printf('|%d|', d.id)) = 0
-)
-SELECT d.*,
-       u.name AS upazilaName,
-       m.name AS mouzaName,
-       v.name AS volumeName,
-       COALESCE(f.files, '') AS files,
-       COUNT(dc.next_id) AS relation_count
-FROM documents d
-LEFT JOIN upazilas u ON d.upazila_id = u.id
-LEFT JOIN mouzas m ON d.mouza_id = m.id
-LEFT JOIN volumes v ON d.volume_id = v.id
-LEFT JOIN (
-    SELECT document_id,
-           GROUP_CONCAT(id || '::' || file_name || '::' || file_path, '|') AS files
-    FROM document_files
-    GROUP BY document_id
-) f ON f.document_id = d.id
-LEFT JOIN down_chain dc ON dc.root_id = d.id
-${whereClause}
-GROUP BY d.id
-ORDER BY d.id DESC
-LIMIT ? OFFSET ?;
-    `
-    )
-    .all(...params, pageSize, offset)
+        SELECT dc.root_id, d.next_document_id, dc.path || d.id || '|'
+        FROM down_chain dc
+        JOIN documents d ON dc.next_id = d.id
+        WHERE d.next_document_id IS NOT NULL
+          AND instr(dc.path, printf('|%d|', d.id)) = 0
+      )
+      SELECT d.*,
+             u.name AS upazilaName,
+             m.name AS mouzaName,
+             v.name AS volumeName,
+             COALESCE(f.files, '') AS files,
+             COUNT(dc.next_id) AS relation_count
+      FROM documents d
+      LEFT JOIN upazilas u ON d.upazila_id = u.id
+      LEFT JOIN mouzas m ON d.mouza_id = m.id
+      LEFT JOIN volumes v ON d.volume_id = v.id
+      LEFT JOIN (
+        SELECT document_id,
+               GROUP_CONCAT(id || '::' || file_name || '::' || file_path, '|') AS files
+        FROM document_files
+        GROUP BY document_id
+      ) f ON f.document_id = d.id
+      LEFT JOIN down_chain dc ON dc.root_id = d.id
+      ${whereClause}
+      GROUP BY d.id
+      ORDER BY d.id DESC
+      LIMIT ? OFFSET ?;
+    `,
+    args: [...params, pageSize, offset]
+  })
 
-  // Parse files array
+  const documents = documentsResult.rows
+
+  // Parse files
   const result = documents.map((doc) => {
     const files = doc.files
       ? doc.files.split('|').map((str) => {
           const [id, file_name, file_path] = str.split('::')
-          return { id: parseInt(id), file_name, file_path }
+          return {
+            id: Number(id),
+            file_name,
+            file_path
+          }
         })
       : []
+
     return { ...doc, files }
   })
 
-  // total count
-  const total = db
-    .prepare(`SELECT COUNT(*) as count FROM documents d ${whereClause}`)
-    .get(...params).count
+  // Total counts
+  const countResult = await db.execute({
+    sql: `SELECT COUNT(*) as count FROM documents d ${whereClause}`,
+    args: params
+  })
 
-  return { data: result, total, page, pageSize }
+  const total = countResult.rows[0]?.count || 0
+
+  return {
+    data: result,
+    total,
+    page,
+    pageSize
+  }
 })
 
 ipcMain.handle('get-document-by-id', async (event, documentId) => {
   if (!documentId) throw new Error('Document ID is required')
 
-  const doc = db
-    .prepare(
-      `
+  const docResult = await db.execute({
+    sql: `
       SELECT 
         d.*,
         u.name AS upazilaName,
@@ -520,46 +575,56 @@ ipcMain.handle('get-document-by-id', async (event, documentId) => {
         GROUP BY document_id
       ) f ON f.document_id = d.id
       WHERE d.id = ?
-      `
-    )
-    .get(documentId)
+    `,
+    args: [documentId]
+  })
+
+  const doc = docResult.rows[0]
 
   if (!doc) return null
 
-  // Map files
+  // Map Files
   const files = doc.files
     ? doc.files.split('|').map((str) => {
         const [fileId, file_name, file_path] = str.split('::')
-        return { id: parseInt(fileId), file_name, file_path }
+        return {
+          id: Number(fileId),
+          file_name,
+          file_path
+        }
       })
     : []
 
   // Fetch previous document
   let previousDocument = null
+
   if (doc.previous_document_id) {
-    previousDocument = db
-      .prepare(
-        `
+    const prevResult = await db.execute({
+      sql: `
         SELECT id, khatian_no, dag_no, holding_no
         FROM documents
         WHERE id = ?
-      `
-      )
-      .get(doc.previous_document_id)
+      `,
+      args: [doc.previous_document_id]
+    })
+
+    previousDocument = prevResult.rows[0] || null
   }
 
   // Fetch next document
   let nextDocument = null
+
   if (doc.next_document_id) {
-    nextDocument = db
-      .prepare(
-        `
+    const nextResult = await db.execute({
+      sql: `
         SELECT id, khatian_no, dag_no, holding_no
         FROM documents
         WHERE id = ?
-      `
-      )
-      .get(doc.next_document_id)
+      `,
+      args: [doc.next_document_id]
+    })
+
+    nextDocument = nextResult.rows[0] || null
   }
 
   return {
@@ -592,27 +657,42 @@ ipcMain.handle('update-document', async (event, payload) => {
   const baseDir = join(getDocumentFolder(), 'documents')
   if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
 
-  function isValidPosition(previousId, nextId, db) {
+  // Validate cycle
+  async function isValidPosition(previousId, nextId, db) {
     if (!previousId || !nextId) return true
-    let current = db
-      .prepare('SELECT id, next_document_id FROM documents WHERE id = ?')
-      .get(previousId)
+
+    let currentResult = await db.execute({
+      sql: 'SELECT id, next_document_id FROM documents WHERE id = ?',
+      args: [previousId]
+    })
+
+    let current = currentResult.rows[0]
     const visited = new Set()
+
     while (current) {
       if (visited.has(current.id)) return false
       visited.add(current.id)
+
       if (current.id === nextId) return true
-      current = current.next_document_id
-        ? db
-            .prepare('SELECT id, next_document_id FROM documents WHERE id = ?')
-            .get(current.next_document_id)
-        : null
+
+      if (!current.next_document_id) break
+
+      currentResult = await db.execute({
+        sql: 'SELECT id, next_document_id FROM documents WHERE id = ?',
+        args: [current.next_document_id]
+      })
+
+      current = currentResult.rows[0]
     }
+
     return false
   }
 
   if (previousDocumentId && nextDocumentId && previousDocumentId === nextDocumentId) {
-    return { success: false, message: 'Previous and next document cannot be the same' }
+    return {
+      success: false,
+      message: 'Previous and next document cannot be the same'
+    }
   }
 
   if (previousDocumentId === id || nextDocumentId === id) {
@@ -623,7 +703,7 @@ ipcMain.handle('update-document', async (event, payload) => {
   }
 
   if (previousDocumentId && nextDocumentId) {
-    const valid = isValidPosition(previousDocumentId, nextDocumentId, db)
+    const valid = await isValidPosition(previousDocumentId, nextDocumentId, db)
     if (!valid) {
       return {
         success: false,
@@ -633,17 +713,19 @@ ipcMain.handle('update-document', async (event, payload) => {
   }
 
   try {
-    const updateTransaction = db.transaction(() => {
-      // Fetch old previous and next
-      const oldDoc = db
-        .prepare('SELECT previous_document_id, next_document_id FROM documents WHERE id = ?')
-        .get(id)
-      const oldPrev = oldDoc.previous_document_id
-      const oldNext = oldDoc.next_document_id
+    // Fetch old links
+    const oldDocRes = await db.execute({
+      sql: `SELECT previous_document_id, next_document_id FROM documents WHERE id = ?`,
+      args: [id]
+    })
 
-      // Update main document info + chain
-      db.prepare(
-        `
+    const oldDoc = oldDocRes.rows[0] || {}
+    const oldPrev = oldDoc.previous_document_id
+    const oldNext = oldDoc.next_document_id
+
+    // Update main document
+    await db.execute({
+      sql: `
         UPDATE documents SET
           upazila_id = ?,
           mouza_id = ?,
@@ -657,8 +739,8 @@ ipcMain.handle('update-document', async (event, payload) => {
           next_document_id = ?,
           updated_at = datetime('now', '+6 hours')
         WHERE id = ?
-      `
-      ).run(
+      `,
+      args: [
         upazilaId,
         mouzaId,
         volumeId,
@@ -670,71 +752,82 @@ ipcMain.handle('update-document', async (event, payload) => {
         previousDocumentId || null,
         nextDocumentId || null,
         id
-      )
-
-      // Fix old neighbors
-      if (oldPrev && oldPrev !== previousDocumentId) {
-        db.prepare(`UPDATE documents SET next_document_id = ? WHERE id = ?`).run(
-          oldNext || null,
-          oldPrev
-        )
-      }
-      if (oldNext && oldNext !== nextDocumentId) {
-        db.prepare(`UPDATE documents SET previous_document_id = ? WHERE id = ?`).run(
-          oldPrev || null,
-          oldNext
-        )
-      }
-
-      // Update new neighbors
-      if (previousDocumentId) {
-        db.prepare(`UPDATE documents SET next_document_id = ? WHERE id = ?`).run(
-          id,
-          previousDocumentId
-        )
-      }
-      if (nextDocumentId) {
-        db.prepare(`UPDATE documents SET previous_document_id = ? WHERE id = ?`).run(
-          id,
-          nextDocumentId
-        )
-      }
-
-      // Handle files
-      const keepIds = existingFiles.map((f) => f.id)
-      const filesToDelete = db
-        .prepare(`SELECT * FROM document_files WHERE document_id = ?`)
-        .all(id)
-        .filter((f) => !keepIds.includes(f.id))
-
-      for (const f of filesToDelete) {
-        const path = join(getDocumentFolder(), 'documents', basename(f.file_path))
-
-        try {
-          if (fs.existsSync(path)) fs.unlinkSync(path)
-        } catch {
-          // Ignore
-        }
-        db.prepare(`DELETE FROM document_files WHERE id = ?`).run(f.id)
-      }
-
-      const fileStmt = db.prepare(`
-        INSERT INTO document_files (document_id, file_name, file_path)
-        VALUES (?, ?, ?)
-      `)
-
-      for (const file of newFiles) {
-        const filename = `${Date.now()}-${file.name}`
-        const filePath = join(baseDir, filename)
-        fs.writeFileSync(filePath, Buffer.from(file.buffer))
-        fileStmt.run(id, file.name, filePath)
-      }
-
-      return id
+      ]
     })
 
-    const updatedId = updateTransaction()
-    return { success: true, documentId: updatedId }
+    // Fix old neighbour
+    if (oldPrev && oldPrev !== previousDocumentId) {
+      await db.execute({
+        sql: `UPDATE documents SET next_document_id = ? WHERE id = ?`,
+        args: [oldNext || null, oldPrev]
+      })
+    }
+
+    if (oldNext && oldNext !== nextDocumentId) {
+      await db.execute({
+        sql: `UPDATE documents SET previous_document_id = ? WHERE id = ?`,
+        args: [oldPrev || null, oldNext]
+      })
+    }
+
+    // Update new neighbour
+    if (previousDocumentId) {
+      await db.execute({
+        sql: `UPDATE documents SET next_document_id = ? WHERE id = ?`,
+        args: [id, previousDocumentId]
+      })
+    }
+
+    if (nextDocumentId) {
+      await db.execute({
+        sql: `UPDATE documents SET previous_document_id = ? WHERE id = ?`,
+        args: [id, nextDocumentId]
+      })
+    }
+
+    // Handle files
+
+    const keepIds = existingFiles.map((f) => f.id)
+
+    const filesRes = await db.execute({
+      sql: `SELECT * FROM document_files WHERE document_id = ?`,
+      args: [id]
+    })
+
+    const filesToDelete = filesRes.rows.filter((f) => !keepIds.includes(f.id))
+
+    for (const f of filesToDelete) {
+      const filePath = join(getDocumentFolder(), 'documents', basename(f.file_path))
+
+      try {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
+      } catch {
+        // ignore
+      }
+
+      await db.execute({
+        sql: `DELETE FROM document_files WHERE id = ?`,
+        args: [f.id]
+      })
+    }
+
+    // Insert new files
+    for (const file of newFiles) {
+      const filename = `${Date.now()}-${file.name}`
+      const filePath = join(baseDir, filename)
+
+      fs.writeFileSync(filePath, Buffer.from(file.buffer))
+
+      await db.execute({
+        sql: `
+          INSERT INTO document_files (document_id, file_name, file_path)
+          VALUES (?, ?, ?)
+        `,
+        args: [id, file.name, filePath]
+      })
+    }
+
+    return { success: true, documentId: id }
   } catch (err) {
     console.error('Error updating document:', err)
     return { success: false, message: 'Failed to update document' }
@@ -742,25 +835,34 @@ ipcMain.handle('update-document', async (event, payload) => {
 })
 
 ipcMain.handle('delete-document', async (event, documentId) => {
-  const files = db
-    .prepare(`SELECT file_path FROM document_files WHERE document_id = ?`)
-    .all(documentId)
+  const filesRes = await db.execute({
+    sql: `SELECT file_path FROM document_files WHERE document_id = ?`,
+    args: [documentId]
+  })
+
+  const files = filesRes.rows
 
   for (const file of files) {
-    const path = join(getDocumentFolder(), 'documents', basename(file.file_path))
+    const filePath = join(getDocumentFolder(), 'documents', basename(file.file_path))
 
-    if (fs.existsSync(path)) {
+    if (fs.existsSync(filePath)) {
       try {
-        fs.unlinkSync(path)
+        fs.unlinkSync(filePath)
       } catch (err) {
-        console.error(`Failed to delete file ${path}:`, err)
+        console.error(`Failed to delete file ${filePath}:`, err)
       }
     }
   }
 
-  db.prepare(`DELETE FROM document_files WHERE document_id = ?`).run(documentId)
+  await db.execute({
+    sql: `DELETE FROM document_files WHERE document_id = ?`,
+    args: [documentId]
+  })
 
-  db.prepare(`DELETE FROM documents WHERE id = ?`).run(documentId)
+  await db.execute({
+    sql: `DELETE FROM documents WHERE id = ?`,
+    args: [documentId]
+  })
 
   return { success: true }
 })
@@ -773,15 +875,20 @@ ipcMain.handle('open-file', async (event, filePath) => {
 
 ipcMain.handle('get-dashboard-state', async () => {
   // Total documents
-  const totalDocuments = db.prepare(`SELECT COUNT(*) AS count FROM documents`).get().count
+  const totalDocumentsRes = await db.execute({
+    sql: `SELECT COUNT(*) AS count FROM documents`
+  })
+  const totalDocuments = totalDocumentsRes.rows[0]?.count || 0
 
   // Total upazilas
-  const totalUpazilas = db.prepare(`SELECT COUNT(*) AS count FROM upazilas`).get().count
+  const totalUpazilasRes = await db.execute({
+    sql: `SELECT COUNT(*) AS count FROM upazilas`
+  })
+  const totalUpazilas = totalUpazilasRes.rows[0]?.count || 0
 
   // Document count by type (global)
-  const docTypeCounts = db
-    .prepare(
-      `
+  const docTypeRes = await db.execute({
+    sql: `
       SELECT
         SUM(CASE WHEN doc_type = 'usable' THEN 1 ELSE 0 END) AS usable,
         SUM(CASE WHEN doc_type = 'unusable' THEN 1 ELSE 0 END) AS unusable,
@@ -789,13 +896,13 @@ ipcMain.handle('get-dashboard-state', async () => {
         SUM(CASE WHEN doc_type = 'not_found' THEN 1 ELSE 0 END) AS not_found
       FROM documents
     `
-    )
-    .get()
+  })
+
+  const docTypeCounts = docTypeRes.rows[0] || {}
 
   // Dashboard stats by upazila
-  const docsByUpazila = db
-    .prepare(
-      `
+  const docsByUpazilaRes = await db.execute({
+    sql: `
       SELECT
         u.id,
         u.name AS upazila,
@@ -811,8 +918,9 @@ ipcMain.handle('get-dashboard-state', async () => {
       LEFT JOIN documents d ON d.upazila_id = u.id
       GROUP BY u.id
     `
-    )
-    .all()
+  })
+
+  const docsByUpazila = docsByUpazilaRes.rows
 
   return {
     totalUpazilas,
@@ -830,36 +938,38 @@ ipcMain.handle('get-report-state', async (event, filters = {}) => {
 
   // Build WHERE conditions dynamically
   const conditions = []
-  const params = {}
+  const params = []
 
   if (upazilaId) {
-    conditions.push('d.upazila_id = @upazilaId')
-    params.upazilaId = upazilaId
+    conditions.push('d.upazila_id = ?')
+    params.push(upazilaId)
   }
   if (mouzaId) {
-    conditions.push('d.mouza_id = @mouzaId')
-    params.mouzaId = mouzaId
+    conditions.push('d.mouza_id = ?')
+    params.push(mouzaId)
   }
   if (volumeId) {
-    conditions.push('d.volume_id = @volumeId')
-    params.volumeId = volumeId
+    conditions.push('d.volume_id = ?')
+    params.push(volumeId)
   }
   if (docType) {
-    conditions.push('d.doc_type = @docType')
-    params.docType = docType
+    conditions.push('d.doc_type = ?')
+    params.push(docType)
   }
 
-  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
-  // Total documents
-  const totalDocuments = db
-    .prepare(`SELECT COUNT(*) AS count FROM documents d ${whereClause}`)
-    .get(params).count
+  // Total document
+  const totalRes = await db.execute({
+    sql: `SELECT COUNT(*) AS count FROM documents d ${whereClause}`,
+    args: params
+  })
+
+  const totalDocuments = totalRes.rows[0]?.count || 0
 
   // Document count by type
-  const docTypeCounts = db
-    .prepare(
-      `
+  const typeRes = await db.execute({
+    sql: `
       SELECT
         SUM(CASE WHEN doc_type = 'usable' THEN 1 ELSE 0 END) AS usable,
         SUM(CASE WHEN doc_type = 'unusable' THEN 1 ELSE 0 END) AS unusable,
@@ -867,9 +977,11 @@ ipcMain.handle('get-report-state', async (event, filters = {}) => {
         SUM(CASE WHEN doc_type = 'not_found' THEN 1 ELSE 0 END) AS not_found
       FROM documents d
       ${whereClause}
-      `
-    )
-    .get(params)
+    `,
+    args: params
+  })
+
+  const docTypeCounts = typeRes.rows[0] || {}
 
   return {
     totalDocuments,
@@ -928,20 +1040,22 @@ ipcMain.handle('start-backup-regional', async (event, { password = null, upazila
 
 ipcMain.handle('get-backup-state', async () => {
   // Overall stats
-  const totalStats = db
-    .prepare(
-      `
+  const totalStatsRes = await db.execute({
+    sql: `
       SELECT 
         (SELECT COUNT(*) FROM documents) AS documents,
         (SELECT COUNT(*) FROM document_files) AS files
     `
-    )
-    .get()
+  })
+
+  const totalStats = totalStatsRes.rows[0] || {
+    documents: 0,
+    files: 0
+  }
 
   // Per-upazila stats
-  const upazilas = db
-    .prepare(
-      `
+  const upazilasRes = await db.execute({
+    sql: `
       SELECT 
         u.id,
         u.name,
@@ -953,8 +1067,9 @@ ipcMain.handle('get-backup-state', async () => {
       GROUP BY u.id
       ORDER BY u.name
     `
-    )
-    .all()
+  })
+
+  const upazilas = upazilasRes.rows
 
   return {
     totalStats,
@@ -970,6 +1085,7 @@ ipcMain.handle('find-document', async (event, payload) => {
   if (!khatianNo || !khatianNo.trim()) throw new Error('Khatian No is required')
 
   const conditions = ['upazila_id = ?', 'mouza_id = ?', 'LOWER(khatian_no) = ?']
+
   const params = [upazilaId, mouzaId, khatianNo.trim().toLowerCase()]
 
   if (holdingNo && holdingNo.trim()) {
@@ -982,57 +1098,74 @@ ipcMain.handle('find-document', async (event, payload) => {
     params.push(plotNo.trim().toLowerCase())
   }
 
-  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
-  const doc = db
-    .prepare(
-      `
+  const result = await db.execute({
+    sql: `
       SELECT *
       FROM documents
       ${whereClause}
       LIMIT 1
-    `
-    )
-    .get(...params)
+    `,
+    args: params
+  })
 
-  return doc || null
+  return result.rows[0] || null
 })
 
 ipcMain.handle('get-document-tree', async (event, rootId) => {
   if (!rootId) throw new Error('Document ID is required')
 
-  // Recursive CTE to traverse the document chain safely
-  const chain = db
-    .prepare(
-      `
-WITH RECURSIVE document_tree(
-    id, khatian_no, holding_no, dag_no, volume_id, next_document_id, path
-) AS (
-    -- Start from the root document
-    SELECT id, khatian_no, holding_no, dag_no, volume_id, next_document_id, printf('|%d|', id) AS path
-    FROM documents
-    WHERE id = ?
+  const result = await db.execute({
+    sql: `
+      WITH RECURSIVE document_tree(
+        id, khatian_no, holding_no, dag_no, volume_id, next_document_id, path
+      ) AS (
+        -- Start from the root document
+        SELECT 
+          id, 
+          khatian_no, 
+          holding_no, 
+          dag_no, 
+          volume_id, 
+          next_document_id, 
+          printf('|%d|', id) AS path
+        FROM documents
+        WHERE id = ?
 
-    UNION ALL
+        UNION ALL
 
-    -- Follow next_document_id only if not already visited
-    SELECT d.id, d.khatian_no, d.holding_no, d.dag_no, d.volume_id, d.next_document_id, dt.path || d.id || '|'
-    FROM document_tree dt
-    JOIN documents d ON dt.next_document_id = d.id
-    WHERE instr(dt.path, printf('|%d|', d.id)) = 0
-)
-SELECT dt.id, dt.khatian_no, dt.holding_no, dt.dag_no, v.name AS volumeName
-FROM document_tree dt
-LEFT JOIN volumes v ON dt.volume_id = v.id
-  `
-    )
-    .all(rootId)
+        -- Follow next_document_id only if not already visited
+        SELECT 
+          d.id, 
+          d.khatian_no, 
+          d.holding_no, 
+          d.dag_no, 
+          d.volume_id, 
+          d.next_document_id, 
+          dt.path || d.id || '|'
+        FROM document_tree dt
+        JOIN documents d ON dt.next_document_id = d.id
+        WHERE instr(dt.path, printf('|%d|', d.id)) = 0
+      )
+      SELECT 
+        dt.id, 
+        dt.khatian_no, 
+        dt.holding_no, 
+        dt.dag_no, 
+        v.name AS volumeName
+      FROM document_tree dt
+      LEFT JOIN volumes v ON dt.volume_id = v.id
+    `,
+    args: [rootId]
+  })
 
-  return chain
+  return result.rows
 })
 
 ipcMain.handle('export-documents', async (event, filters) => {
   const { format, upazilaId, mouzaId, volumeId, docType, searchQuery, rows } = filters
+
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
 
   const defaultName =
@@ -1084,9 +1217,8 @@ ipcMain.handle('export-documents', async (event, filters) => {
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
   // Fetch documents
-  const documents = db
-    .prepare(
-      `
+  const documentsRes = await db.execute({
+    sql: `
       SELECT 
         d.*,
         u.name AS upazilaName,
@@ -1098,10 +1230,12 @@ ipcMain.handle('export-documents', async (event, filters) => {
       LEFT JOIN volumes v ON d.volume_id = v.id
       ${whereClause}
       ORDER BY d.id DESC
-      LIMIT ${rows}
-      `
-    )
-    .all(...params)
+      LIMIT ?
+    `,
+    args: [...params, rows]
+  })
+
+  const documents = documentsRes.rows
 
   if (!documents.length) {
     return { success: false, message: 'No data found for selected filters.' }
@@ -1127,42 +1261,47 @@ ipcMain.handle('export-documents', async (event, filters) => {
         data: docData,
         outDir: filePath
       })
-
-      return { success }
-    } else if (format === 'excel') {
-      const success = await exportToExcel({ data: docData, outDir: filePath })
       return { success }
     }
-    if (format === 'word') {
-      const success = await exportToWord({ data: docData, outDir: filePath })
-      return { success }
-    }
-    {
-      // PDF export
-      const tableData = [
-        ['#', 'Upazila', 'Mouza', 'Volume', 'Khatian', 'Holding', 'Plot', 'Type'],
-        ...documents.map((d) => [
-          d.id,
-          d.upazilaName,
-          d.mouzaName,
-          d.volumeName,
-          d.khatian_no || 'N/A',
-          d.holding_no || 'N/A',
-          d.dag_no || 'N/A',
-          d.doc_type
-            ? d.doc_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-            : 'N/A'
-        ])
-      ]
 
-      const success = await exportToPDF({
-        tableData,
-        columnWidths: [45, '*', 60, 60, 75, 50, 55, 55],
+    if (format === 'excel') {
+      const success = await exportToExcel({
+        data: docData,
         outDir: filePath
       })
-
       return { success }
     }
+
+    if (format === 'word') {
+      const success = await exportToWord({
+        data: docData,
+        outDir: filePath
+      })
+      return { success }
+    }
+
+    // Pdf export
+    const tableData = [
+      ['#', 'Upazila', 'Mouza', 'Volume', 'Khatian', 'Holding', 'Plot', 'Type'],
+      ...documents.map((d) => [
+        d.id,
+        d.upazilaName,
+        d.mouzaName,
+        d.volumeName,
+        d.khatian_no || 'N/A',
+        d.holding_no || 'N/A',
+        d.dag_no || 'N/A',
+        d.doc_type ? d.doc_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : 'N/A'
+      ])
+    ]
+
+    const success = await exportToPDF({
+      tableData,
+      columnWidths: [45, '*', 60, 60, 75, 50, 55, 55],
+      outDir: filePath
+    })
+
+    return { success }
   } catch (err) {
     console.error('Export failed:', err)
     return { success: false }
@@ -1173,7 +1312,6 @@ ipcMain.handle('export-document-tree', async (event, rootId) => {
   if (!rootId) throw new Error('Document ID is required')
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-
   const defaultName = `document-tree-${rootId}-${timestamp}.pdf`
 
   const { canceled, filePath } = await dialog.showSaveDialog({
@@ -1183,26 +1321,10 @@ ipcMain.handle('export-document-tree', async (event, rootId) => {
 
   if (canceled || !filePath) return { success: false }
 
-  // Recursive query to get the chain
-  const documents = db
-    .prepare(
-      `
-WITH RECURSIVE document_tree(
-    id,
-    upazila_id,
-    mouza_id,
-    volume_id,
-    khatian_no,
-    holding_no,
-    dag_no,
-    doc_type,
-    remarks,
-    created_at,
-    updated_at,
-    next_document_id,
-    path
-) AS (
-    SELECT
+  // Recursive query
+  const result = await db.execute({
+    sql: `
+      WITH RECURSIVE document_tree(
         id,
         upazila_id,
         mouza_id,
@@ -1215,50 +1337,67 @@ WITH RECURSIVE document_tree(
         created_at,
         updated_at,
         next_document_id,
-        printf('|%d|', id)
-    FROM documents
-    WHERE id = ?
+        path
+      ) AS (
+        SELECT
+          id,
+          upazila_id,
+          mouza_id,
+          volume_id,
+          khatian_no,
+          holding_no,
+          dag_no,
+          doc_type,
+          remarks,
+          created_at,
+          updated_at,
+          next_document_id,
+          printf('|%d|', id)
+        FROM documents
+        WHERE id = ?
 
-    UNION ALL
+        UNION ALL
 
-    SELECT
-        d.id,
-        d.upazila_id,
-        d.mouza_id,
-        d.volume_id,
-        d.khatian_no,
-        d.holding_no,
-        d.dag_no,
-        d.doc_type,
-        d.remarks,
-        d.created_at,
-        d.updated_at,
-        d.next_document_id,
-        dt.path || d.id || '|'
-    FROM document_tree dt
-    JOIN documents d ON dt.next_document_id = d.id
-    WHERE instr(dt.path, printf('|%d|', d.id)) = 0
-)
+        SELECT
+          d.id,
+          d.upazila_id,
+          d.mouza_id,
+          d.volume_id,
+          d.khatian_no,
+          d.holding_no,
+          d.dag_no,
+          d.doc_type,
+          d.remarks,
+          d.created_at,
+          d.updated_at,
+          d.next_document_id,
+          dt.path || d.id || '|'
+        FROM document_tree dt
+        JOIN documents d ON dt.next_document_id = d.id
+        WHERE instr(dt.path, printf('|%d|', d.id)) = 0
+      )
 
-SELECT
-  dt.*,
-  u.name AS upazilaName,
-  m.name AS mouzaName,
-  v.name AS volumeName
-FROM document_tree dt
-LEFT JOIN upazilas u ON dt.upazila_id = u.id
-LEFT JOIN mouzas m ON dt.mouza_id = m.id
-LEFT JOIN volumes v ON dt.volume_id = v.id
-ORDER BY dt.id
-`
-    )
-    .all(rootId)
+      SELECT
+        dt.*,
+        u.name AS upazilaName,
+        m.name AS mouzaName,
+        v.name AS volumeName
+      FROM document_tree dt
+      LEFT JOIN upazilas u ON dt.upazila_id = u.id
+      LEFT JOIN mouzas m ON dt.mouza_id = m.id
+      LEFT JOIN volumes v ON dt.volume_id = v.id
+      ORDER BY dt.id
+    `,
+    args: [rootId]
+  })
+
+  const documents = result.rows
 
   if (!documents.length) {
     return { success: false, message: 'No related documents found.' }
   }
 
-  // Format for PDF
+  // Format for pdf
   const tableData = [
     ['#', 'Upazila', 'Mouza', 'Volume', 'Khatian', 'Holding', 'Plot', 'Type'],
     ...documents.map((d) => [

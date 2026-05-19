@@ -21,6 +21,7 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@fast-csv/format": "^5.0.5",
+    "@libsql/client": "^0.17.3",
     "7zip-bin": "^5.2.0",
     "better-sqlite3": "^12.6.2",
     "docx": "^9.6.1",

@@ -91,7 +91,7 @@ export default function UpdateNameModal({
           {/* Actions */}
           <div className="flex justify-between gap-2 font-medium">
             <button
-              className="px-4 py-2 rounded bg-gray-50 text-red-600 border border-red-200 hover:bg-red-50"
+              className="px-4 py-2 rounded bg-gray-50 text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50"
               onClick={onDelete}
               disabled={loading}
             >
@@ -107,7 +107,7 @@ export default function UpdateNameModal({
                 Cancel
               </button>
               <button
-                className="px-6 py-2 bg-emerald-700 text-white rounded hover:bg-emerald-800"
+                className="px-6 py-2 bg-emerald-700 text-white rounded hover:bg-emerald-800 disabled:opacity-50"
                 onClick={handleUpdate}
                 disabled={loading}
               >
