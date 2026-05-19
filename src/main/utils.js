@@ -21,6 +21,7 @@ import {
   PageOrientation,
   TableLayoutType
 } from 'docx'
+import { getDB } from './db'
 
 export function getDocumentFolder() {
   let folder
@@ -136,80 +137,35 @@ export async function backupFolderRegional(
     password: password || undefined
   }
 
-  // TEMP DB COPY
-  const tempDir = join(os.tmpdir(), `backup-temp-${Date.now()}`)
-  await fsp.mkdir(tempDir, { recursive: true })
+  const db = getDB() // db instance
 
-  const dbPath = join(sourceDir, 'app.db')
-  const tempDbPath = join(tempDir, 'app.db')
-  await fsp.copyFile(dbPath, tempDbPath)
-
-  // --- FILTER DB ---
-  const tempDb = new Database(tempDbPath)
-  tempDb.pragma('foreign_keys = OFF')
-
-  const tx = tempDb.transaction((upazilaId) => {
-    tempDb.prepare(`DELETE FROM documents WHERE upazila_id != ?`).run(upazilaId)
-    tempDb.prepare(`DELETE FROM mouzas WHERE upazila_id != ?`).run(upazilaId)
-    tempDb.prepare(`DELETE FROM volumes WHERE upazila_id != ?`).run(upazilaId)
-    tempDb.prepare(`DELETE FROM upazilas WHERE id != ?`).run(upazilaId)
-    tempDb
-      .prepare(
-        `DELETE FROM document_files 
-           WHERE document_id NOT IN (SELECT id FROM documents)`
-      )
-      .run()
+  const rows = await db.execute({
+    sql: `
+      SELECT file_path
+      FROM document_files df
+      JOIN documents d ON d.id = df.document_id
+      WHERE d.upazila_id = ?
+    `,
+    args: [upazilaId]
   })
 
-  tx(upazilaId)
+  const fileList = rows.rows.map((r) => r.file_path)
 
-  // --- Integrity check ---
-  const check = tempDb.prepare('PRAGMA integrity_check').get()
-  if (check.integrity_check !== 'ok') {
-    tempDb.close()
-    throw new Error('Filtered DB failed integrity check')
+  if (!fileList.length) {
+    throw new Error('No files found for this upazila')
   }
 
-  tempDb.exec('VACUUM')
-  tempDb.pragma('foreign_keys = ON')
-
-  // --- Get only files for this upazila directly from DB ---
-  const rows = tempDb
-    .prepare(
-      `SELECT df.file_path 
-         FROM document_files df 
-         JOIN documents d ON df.document_id = d.id 
-         WHERE d.upazila_id = ?`
-    )
-    .all(upazilaId)
-
-  tempDb.close()
-
-  // Only include files that actually exist
-  const filesToInclude = (
-    await Promise.all(
-      rows.map(async (r) => {
-        try {
-          await fsp.access(r.file_path) // throws if file doesn't exist
-          return r.file_path
-        } catch {
-          return null
-        }
-      })
-    )
-  ).filter((p) => p !== null)
-
-  // Include filtered DB at root
-  filesToInclude.push(tempDbPath)
+  // total for progress
+  const totalFiles = fileList.length
 
   return new Promise((resolve, reject) => {
-    const archive = Seven.add(outputArchive, filesToInclude, options)
+    const archive = Seven.add(outputArchive, fileList, options)
 
     archive.on('progress', (data) => {
       const progressData = {
         percent: data.percent,
         processed: data.fileCount,
-        total: filesToInclude.length
+        total: totalFiles
       }
 
       if (webContents) {
@@ -218,21 +174,11 @@ export async function backupFolderRegional(
     })
 
     archive.on('end', async () => {
-      try {
-        await fsp.rm(tempDir, { recursive: true, force: true })
-      } catch (err) {
-        console.error('Failed to clean temp folder:', err)
-      }
       console.log(`Backup complete! Archive saved at: ${outputArchive}`)
       resolve()
     })
 
     archive.on('error', async (err) => {
-      try {
-        await fsp.rm(tempDir, { recursive: true, force: true })
-      } catch {
-        // Ignore
-      }
       console.error('Backup failed:', err)
       reject(err)
     })
