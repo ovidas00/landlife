@@ -928,46 +928,50 @@ ipcMain.handle('get-report-state', async (event, filters = {}) => {
 
   // Build WHERE conditions dynamically
   const conditions = []
-  const params = {}
+  const params = []
 
   if (upazilaId) {
-    conditions.push('d.upazila_id = @upazilaId')
-    params.upazilaId = upazilaId
+    conditions.push('d.upazila_id = ?')
+    params.push(upazilaId)
   }
   if (mouzaId) {
-    conditions.push('d.mouza_id = @mouzaId')
-    params.mouzaId = mouzaId
+    conditions.push('d.mouza_id = ?')
+    params.push(mouzaId)
   }
   if (volumeId) {
-    conditions.push('d.volume_id = @volumeId')
-    params.volumeId = volumeId
+    conditions.push('d.volume_id = ?')
+    params.push(volumeId)
   }
   if (docType) {
-    conditions.push('d.doc_type = @docType')
-    params.docType = docType
+    conditions.push('d.doc_type = ?')
+    params.push(docType)
   }
 
   const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
 
   // Total documents
-  const totalDocuments = db
-    .prepare(`SELECT COUNT(*) AS count FROM documents d ${whereClause}`)
-    .get(params).count
+  const [totalRows] = await db.execute(
+    `SELECT COUNT(*) AS count FROM documents d ${whereClause}`,
+    params
+  )
+
+  const totalDocuments = totalRows[0]?.count || 0
 
   // Document count by type
-  const docTypeCounts = db
-    .prepare(
-      `
-      SELECT
-        SUM(CASE WHEN doc_type = 'usable' THEN 1 ELSE 0 END) AS usable,
-        SUM(CASE WHEN doc_type = 'unusable' THEN 1 ELSE 0 END) AS unusable,
-        SUM(CASE WHEN doc_type = 'moderate' THEN 1 ELSE 0 END) AS moderate,
-        SUM(CASE WHEN doc_type = 'not_found' THEN 1 ELSE 0 END) AS not_found
-      FROM documents d
-      ${whereClause}
-      `
-    )
-    .get(params)
+  const [typeRows] = await db.execute(
+    `
+    SELECT
+      SUM(CASE WHEN doc_type = 'usable' THEN 1 ELSE 0 END) AS usable,
+      SUM(CASE WHEN doc_type = 'unusable' THEN 1 ELSE 0 END) AS unusable,
+      SUM(CASE WHEN doc_type = 'moderate' THEN 1 ELSE 0 END) AS moderate,
+      SUM(CASE WHEN doc_type = 'not_found' THEN 1 ELSE 0 END) AS not_found
+    FROM documents d
+    ${whereClause}
+    `,
+    params
+  )
+
+  const docTypeCounts = typeRows[0] || {}
 
   return {
     totalDocuments,
@@ -1025,34 +1029,30 @@ ipcMain.handle('start-backup-regional', async (event, { password = null, upazila
 })
 
 ipcMain.handle('get-backup-state', async () => {
+  const db = await getDB()
+
   // Overall stats
-  const totalStats = db
-    .prepare(
-      `
-      SELECT 
-        (SELECT COUNT(*) FROM documents) AS documents,
-        (SELECT COUNT(*) FROM document_files) AS files
-    `
-    )
-    .get()
+  const [totalRows] = await db.execute(`
+    SELECT 
+      (SELECT COUNT(*) FROM documents) AS documents,
+      (SELECT COUNT(*) FROM document_files) AS files
+  `)
+
+  const totalStats = totalRows[0] || { documents: 0, files: 0 }
 
   // Per-upazila stats
-  const upazilas = db
-    .prepare(
-      `
-      SELECT 
-        u.id,
-        u.name,
-        COUNT(DISTINCT d.id) AS documents,
-        COUNT(f.id) AS files
-      FROM upazilas u
-      LEFT JOIN documents d ON d.upazila_id = u.id
-      LEFT JOIN document_files f ON f.document_id = d.id
-      GROUP BY u.id
-      ORDER BY u.name
-    `
-    )
-    .all()
+  const [upazilas] = await db.execute(`
+    SELECT 
+      u.id,
+      u.name,
+      COUNT(DISTINCT d.id) AS documents,
+      COUNT(f.id) AS files
+    FROM upazilas u
+    LEFT JOIN documents d ON d.upazila_id = u.id
+    LEFT JOIN document_files f ON f.document_id = d.id
+    GROUP BY u.id
+    ORDER BY u.name
+  `)
 
   return {
     totalStats,
@@ -1065,72 +1065,105 @@ ipcMain.handle('find-document', async (event, payload) => {
 
   if (!upazilaId) throw new Error('Upazila is required')
   if (!mouzaId) throw new Error('Mouza is required')
-  if (!khatianNo || !khatianNo.trim()) throw new Error('Khatian No is required')
 
-  const conditions = ['upazila_id = ?', 'mouza_id = ?', 'LOWER(khatian_no) = ?']
-  const params = [upazilaId, mouzaId, khatianNo.trim().toLowerCase()]
+  // At least one search field required
+  if (!khatianNo?.trim() && !holdingNo?.trim() && !plotNo?.trim()) {
+    throw new Error('Provide at least one of Khatian / Holding / Plot')
+  }
+
+  const conditions = ['upazila_id = ?', 'mouza_id = ?']
+  const params = [upazilaId, mouzaId]
+
+  const searchConditions = []
+
+  if (khatianNo && khatianNo.trim()) {
+    searchConditions.push('LOWER(khatian_no) = ?')
+    params.push(khatianNo.trim().toLowerCase())
+  }
 
   if (holdingNo && holdingNo.trim()) {
-    conditions.push('LOWER(holding_no) = ?')
+    searchConditions.push('LOWER(holding_no) = ?')
     params.push(holdingNo.trim().toLowerCase())
   }
 
   if (plotNo && plotNo.trim()) {
-    conditions.push('LOWER(dag_no) = ?')
+    searchConditions.push('LOWER(dag_no) = ?')
     params.push(plotNo.trim().toLowerCase())
   }
 
-  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+  // Combine OR conditions
+  if (searchConditions.length) {
+    conditions.push(`(${searchConditions.join(' OR ')})`)
+  }
 
-  const doc = db
-    .prepare(
-      `
-      SELECT *
-      FROM documents
-      ${whereClause}
-      LIMIT 1
+  const whereClause = `WHERE ${conditions.join(' AND ')}`
+
+  const [rows] = await db.execute(
     `
-    )
-    .get(...params)
+    SELECT *
+    FROM documents
+    ${whereClause}
+    LIMIT 1
+    `,
+    params
+  )
 
-  return doc || null
+  return rows[0] || null
 })
 
 ipcMain.handle('get-document-tree', async (event, rootId) => {
   if (!rootId) throw new Error('Document ID is required')
 
-  // Recursive CTE to traverse the document chain safely
-  const chain = db
-    .prepare(
-      `
-WITH RECURSIVE document_tree(
-    id, khatian_no, holding_no, dag_no, volume_id, next_document_id, path
-) AS (
-    -- Start from the root document
-    SELECT id, khatian_no, holding_no, dag_no, volume_id, next_document_id, printf('|%d|', id) AS path
-    FROM documents
-    WHERE id = ?
+  const [chain] = await db.execute(
+    `
+    WITH RECURSIVE document_tree (
+      id, khatian_no, holding_no, dag_no, volume_id, next_document_id, path
+    ) AS (
+      -- Root document
+      SELECT 
+        id, 
+        khatian_no, 
+        holding_no, 
+        dag_no, 
+        volume_id, 
+        next_document_id, 
+        CONCAT('|', id, '|') AS path
+      FROM documents
+      WHERE id = ?
 
-    UNION ALL
+      UNION ALL
 
-    -- Follow next_document_id only if not already visited
-    SELECT d.id, d.khatian_no, d.holding_no, d.dag_no, d.volume_id, d.next_document_id, dt.path || d.id || '|'
-    FROM document_tree dt
-    JOIN documents d ON dt.next_document_id = d.id
-    WHERE instr(dt.path, printf('|%d|', d.id)) = 0
-)
-SELECT dt.id, dt.khatian_no, dt.holding_no, dt.dag_no, v.name AS volumeName
-FROM document_tree dt
-LEFT JOIN volumes v ON dt.volume_id = v.id
-  `
+      -- Traverse forward safely (avoid cycles)
+      SELECT 
+        d.id, 
+        d.khatian_no, 
+        d.holding_no, 
+        d.dag_no, 
+        d.volume_id, 
+        d.next_document_id, 
+        CONCAT(dt.path, d.id, '|')
+      FROM document_tree dt
+      JOIN documents d ON dt.next_document_id = d.id
+      WHERE INSTR(dt.path, CONCAT('|', d.id, '|')) = 0
     )
-    .all(rootId)
+    SELECT 
+      dt.id, 
+      dt.khatian_no, 
+      dt.holding_no, 
+      dt.dag_no, 
+      v.name AS volumeName
+    FROM document_tree dt
+    LEFT JOIN volumes v ON dt.volume_id = v.id
+    `,
+    [rootId]
+  )
 
   return chain
 })
 
 ipcMain.handle('export-documents', async (event, filters) => {
-  const { format, upazilaId, mouzaId, volumeId, docType, searchQuery, rows } = filters
+  const { format, upazilaId, mouzaId, volumeId, docType, searchQuery, rows = 100 } = filters
+
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
 
   const defaultName =
@@ -1149,7 +1182,7 @@ ipcMain.handle('export-documents', async (event, filters) => {
 
   if (canceled || !filePath) return { success: false }
 
-  // Filters
+  // Build filters
   const conditions = []
   const params = []
 
@@ -1157,54 +1190,64 @@ ipcMain.handle('export-documents', async (event, filters) => {
     conditions.push('d.upazila_id = ?')
     params.push(upazilaId)
   }
+
   if (mouzaId) {
     conditions.push('d.mouza_id = ?')
     params.push(mouzaId)
   }
+
   if (volumeId) {
     conditions.push('d.volume_id = ?')
     params.push(volumeId)
   }
+
   if (docType) {
     conditions.push('d.doc_type = ?')
     params.push(docType)
   }
-  if (searchQuery) {
-    const q = `%${searchQuery.toLowerCase()}%`
+
+  if (searchQuery && searchQuery.trim()) {
+    const q = `%${searchQuery.trim()}%`
+
+    // MySQL default collation is case-insensitive
     conditions.push(`(
-      LOWER(d.khatian_no) LIKE ?
-      OR LOWER(d.dag_no) LIKE ?
-      OR LOWER(d.holding_no) LIKE ?
+      d.khatian_no LIKE ?
+      OR d.dag_no LIKE ?
+      OR d.holding_no LIKE ?
     )`)
+
     params.push(q, q, q)
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
-  // Fetch documents
-  const documents = db
-    .prepare(
-      `
-      SELECT 
-        d.*,
-        u.name AS upazilaName,
-        m.name AS mouzaName,
-        v.name AS volumeName
-      FROM documents d
-      LEFT JOIN upazilas u ON d.upazila_id = u.id
-      LEFT JOIN mouzas m ON d.mouza_id = m.id
-      LEFT JOIN volumes v ON d.volume_id = v.id
-      ${whereClause}
-      ORDER BY d.id DESC
-      LIMIT ${rows}
-      `
-    )
-    .all(...params)
+  // Safe limit
+  const limit = Number(rows) > 0 ? Number(rows) : 100
+
+  // Fetch data
+  const [documents] = await db.execute(
+    `
+  SELECT 
+    d.*,
+    u.name AS upazilaName,
+    m.name AS mouzaName,
+    v.name AS volumeName
+  FROM documents d
+  LEFT JOIN upazilas u ON d.upazila_id = u.id
+  LEFT JOIN mouzas m ON d.mouza_id = m.id
+  LEFT JOIN volumes v ON d.volume_id = v.id
+  ${whereClause}
+  ORDER BY d.id DESC
+  LIMIT ${limit}   -- ✅ inject, not bind
+  `,
+    params
+  )
 
   if (!documents.length) {
     return { success: false, message: 'No data found for selected filters.' }
   }
 
+  // Format data
   const docData = documents.map((d) => ({
     '#': d.id,
     Upazila: d.upazilaName,
@@ -1221,45 +1264,38 @@ ipcMain.handle('export-documents', async (event, filters) => {
 
   try {
     if (format === 'csv') {
-      const success = await exportToCSV({
-        data: docData,
-        outDir: filePath
-      })
-
-      return { success }
-    } else if (format === 'excel') {
-      const success = await exportToExcel({ data: docData, outDir: filePath })
-      return { success }
+      return { success: await exportToCSV({ data: docData, outDir: filePath }) }
     }
+
+    if (format === 'excel') {
+      return { success: await exportToExcel({ data: docData, outDir: filePath }) }
+    }
+
     if (format === 'word') {
-      const success = await exportToWord({ data: docData, outDir: filePath })
-      return { success }
+      return { success: await exportToWord({ data: docData, outDir: filePath }) }
     }
-    {
-      // PDF export
-      const tableData = [
-        ['#', 'Upazila', 'Mouza', 'Volume', 'Khatian', 'Holding', 'Plot', 'Type'],
-        ...documents.map((d) => [
-          d.id,
-          d.upazilaName,
-          d.mouzaName,
-          d.volumeName,
-          d.khatian_no || 'N/A',
-          d.holding_no || 'N/A',
-          d.dag_no || 'N/A',
-          d.doc_type
-            ? d.doc_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-            : 'N/A'
-        ])
-      ]
 
-      const success = await exportToPDF({
+    // PDF
+    const tableData = [
+      ['#', 'Upazila', 'Mouza', 'Volume', 'Khatian', 'Holding', 'Plot', 'Type'],
+      ...documents.map((d) => [
+        d.id,
+        d.upazilaName,
+        d.mouzaName,
+        d.volumeName,
+        d.khatian_no || 'N/A',
+        d.holding_no || 'N/A',
+        d.dag_no || 'N/A',
+        d.doc_type ? d.doc_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : 'N/A'
+      ])
+    ]
+
+    return {
+      success: await exportToPDF({
         tableData,
         columnWidths: [45, '*', 60, 60, 75, 50, 55, 55],
         outDir: filePath
       })
-
-      return { success }
     }
   } catch (err) {
     console.error('Export failed:', err)
@@ -1268,10 +1304,11 @@ ipcMain.handle('export-documents', async (event, filters) => {
 })
 
 ipcMain.handle('export-document-tree', async (event, rootId) => {
+  const db = await getDB()
+
   if (!rootId) throw new Error('Document ID is required')
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-
   const defaultName = `document-tree-${rootId}-${timestamp}.pdf`
 
   const { canceled, filePath } = await dialog.showSaveDialog({
@@ -1281,45 +1318,11 @@ ipcMain.handle('export-document-tree', async (event, rootId) => {
 
   if (canceled || !filePath) return { success: false }
 
-  // Recursive query to get the chain
-  const documents = db
-    .prepare(
-      `
-WITH RECURSIVE document_tree(
-    id,
-    upazila_id,
-    mouza_id,
-    volume_id,
-    khatian_no,
-    holding_no,
-    dag_no,
-    doc_type,
-    remarks,
-    created_at,
-    updated_at,
-    next_document_id,
-    path
-) AS (
-    SELECT
-        id,
-        upazila_id,
-        mouza_id,
-        volume_id,
-        khatian_no,
-        holding_no,
-        dag_no,
-        doc_type,
-        remarks,
-        created_at,
-        updated_at,
-        next_document_id,
-        printf('|%d|', id)
-    FROM documents
-    WHERE id = ?
-
-    UNION ALL
-
-    SELECT
+  const [documents] = await db.execute(
+    `
+    WITH RECURSIVE document_tree AS (
+      -- Root
+      SELECT
         d.id,
         d.upazila_id,
         d.mouza_id,
@@ -1332,31 +1335,53 @@ WITH RECURSIVE document_tree(
         d.created_at,
         d.updated_at,
         d.next_document_id,
-        dt.path || d.id || '|'
-    FROM document_tree dt
-    JOIN documents d ON dt.next_document_id = d.id
-    WHERE instr(dt.path, printf('|%d|', d.id)) = 0
-)
+        CONCAT('|', d.id, '|') AS path
+      FROM documents d
+      WHERE d.id = ?
 
-SELECT
-  dt.*,
-  u.name AS upazilaName,
-  m.name AS mouzaName,
-  v.name AS volumeName
-FROM document_tree dt
-LEFT JOIN upazilas u ON dt.upazila_id = u.id
-LEFT JOIN mouzas m ON dt.mouza_id = m.id
-LEFT JOIN volumes v ON dt.volume_id = v.id
-ORDER BY dt.id
-`
+      UNION ALL
+
+      -- Traverse next_document_id
+      SELECT
+        d.id,
+        d.upazila_id,
+        d.mouza_id,
+        d.volume_id,
+        d.khatian_no,
+        d.holding_no,
+        d.dag_no,
+        d.doc_type,
+        d.remarks,
+        d.created_at,
+        d.updated_at,
+        d.next_document_id,
+        CONCAT(dt.path, d.id, '|') AS path
+      FROM document_tree dt
+      JOIN documents d ON dt.next_document_id = d.id
+
+      -- Prevent infinite loop
+      WHERE LOCATE(CONCAT('|', d.id, '|'), dt.path) = 0
     )
-    .all(rootId)
+
+    SELECT
+      dt.*,
+      u.name AS upazilaName,
+      m.name AS mouzaName,
+      v.name AS volumeName
+    FROM document_tree dt
+    LEFT JOIN upazilas u ON dt.upazila_id = u.id
+    LEFT JOIN mouzas m ON dt.mouza_id = m.id
+    LEFT JOIN volumes v ON dt.volume_id = v.id
+    ORDER BY dt.id
+    `,
+    [rootId]
+  )
 
   if (!documents.length) {
     return { success: false, message: 'No related documents found.' }
   }
 
-  // Format for PDF
+  // Format for pdf
   const tableData = [
     ['#', 'Upazila', 'Mouza', 'Volume', 'Khatian', 'Holding', 'Plot', 'Type'],
     ...documents.map((d) => [
