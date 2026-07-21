@@ -153,12 +153,13 @@ export default function UpdateDocument() {
 
   const handleSearchDocument = async (formData) => {
     try {
-      const { upazilaId, mouzaId, khatianNo, holdingNo, plotNo } = formData
+      const { id, upazilaId, mouzaId, khatianNo, holdingNo, plotNo } = formData
 
       const document = await window.api.findDocument({
         upazilaId,
         mouzaId,
-        khatianNo,
+        id: id || null,
+        khatianNo: khatianNo || null,
         holdingNo: holdingNo || null,
         plotNo: plotNo || null
       })

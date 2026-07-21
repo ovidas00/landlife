@@ -14,6 +14,7 @@ export default function DocumentPickerModal({
   const [mouzas, setMouzas] = useState([])
 
   const [formData, setFormData] = useState({
+    id: '',
     upazilaId: '',
     mouzaId: '',
     khatianNo: '',
@@ -32,7 +33,6 @@ export default function DocumentPickerModal({
     const data = await window.api.getUpazilas()
     setUpazilas(data)
 
-    // only set default if no prop value
     if (data.length > 0 && !upazilaId) {
       setFormData((prev) => ({
         ...prev,
@@ -41,13 +41,16 @@ export default function DocumentPickerModal({
     }
   }
 
-  // Load Mouzas for selected Upazila
+  // Load Mouzas
   const loadMouzas = async (upazilaId) => {
     const data = await window.api.getMouzas(upazilaId)
     setMouzas(data)
 
     if (data.length > 0 && !mouzaId) {
-      setFormData((prev) => ({ ...prev, mouzaId: data[0].id }))
+      setFormData((prev) => ({
+        ...prev,
+        mouzaId: data[0].id
+      }))
     }
   }
 
@@ -62,28 +65,49 @@ export default function DocumentPickerModal({
   if (!isOpen) return null
 
   const handleSubmit = () => {
-    const { upazilaId, mouzaId } = formData
-    // Upazila and Mouza must exist
-    if (!formData.upazilaId || !formData.mouzaId) {
+    const { id, upazilaId, mouzaId, khatianNo, holdingNo, plotNo } = formData
+
+    // Always require location
+    if (!upazilaId || !mouzaId) {
       showError('Please select Upazila and Mouza')
       return
     }
 
-    // At least one of the 3 fields must be filled
-    if (!formData.khatianNo.trim() && !formData.holdingNo.trim() && !formData.plotNo.trim()) {
+    // If ID exists → send with location
+    if (id.trim()) {
+      onSubmit({
+        id: id.trim(),
+        upazilaId,
+        mouzaId
+      })
+      onClose()
+      return
+    }
+
+    // Otherwise require at least one field
+    if (!khatianNo.trim() && !holdingNo.trim() && !plotNo.trim()) {
       showError('Please enter at least Khatian, Holding, or Plot number')
       return
     }
 
-    onSubmit(formData)
-    // Reset optional fields
+    onSubmit({
+      upazilaId,
+      mouzaId,
+      khatianNo,
+      holdingNo,
+      plotNo
+    })
+
+    // Reset (keep location)
     setFormData({
+      id: '',
       upazilaId,
       mouzaId,
       khatianNo: '',
       holdingNo: '',
       plotNo: ''
     })
+
     onClose()
   }
 
@@ -106,13 +130,30 @@ export default function DocumentPickerModal({
 
         {/* Body */}
         <div className="space-y-4 p-6 pt-0">
-          {/* Upazila / Mouza selectors */}
+          {/* ID Field */}
+          <div>
+            <label className="block mb-2 font-medium">Document ID</label>
+            <input
+              type="text"
+              placeholder="Enter ID (optional)"
+              value={formData.id}
+              onChange={(e) => setFormData((prev) => ({ ...prev, id: e.target.value }))}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
+            />
+          </div>
+
+          {/* Upazila / Mouza */}
           <div className="space-y-4">
             <div>
               <label className="block mb-2 font-medium">Upazila</label>
               <select
                 value={formData.upazilaId}
-                onChange={(e) => setFormData((prev) => ({ ...prev, upazilaId: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    upazilaId: e.target.value
+                  }))
+                }
                 className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
               >
                 {upazilas.map((u) => (
@@ -127,7 +168,12 @@ export default function DocumentPickerModal({
               <label className="block mb-2 font-medium">Mouza</label>
               <select
                 value={formData.mouzaId}
-                onChange={(e) => setFormData((prev) => ({ ...prev, mouzaId: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    mouzaId: e.target.value
+                  }))
+                }
                 className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
               >
                 {mouzas.map((m) => (
@@ -139,7 +185,7 @@ export default function DocumentPickerModal({
             </div>
           </div>
 
-          {/* Khatian / Holding / Plot inputs */}
+          {/* Fields */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block mb-2 font-medium">Khatian No</label>
@@ -147,7 +193,12 @@ export default function DocumentPickerModal({
                 type="text"
                 placeholder="Enter Khatian"
                 value={formData.khatianNo}
-                onChange={(e) => setFormData((prev) => ({ ...prev, khatianNo: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    khatianNo: e.target.value
+                  }))
+                }
                 className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
               />
             </div>
@@ -158,7 +209,12 @@ export default function DocumentPickerModal({
                 type="text"
                 placeholder="Enter Holding"
                 value={formData.holdingNo}
-                onChange={(e) => setFormData((prev) => ({ ...prev, holdingNo: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    holdingNo: e.target.value
+                  }))
+                }
                 className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
               />
             </div>
@@ -169,7 +225,12 @@ export default function DocumentPickerModal({
                 type="text"
                 placeholder="Enter Plot"
                 value={formData.plotNo}
-                onChange={(e) => setFormData((prev) => ({ ...prev, plotNo: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    plotNo: e.target.value
+                  }))
+                }
                 className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
               />
             </div>

@@ -867,12 +867,14 @@ ipcMain.handle('delete-document', async (event, documentId) => {
   }
 })
 
+/* Utils */
 ipcMain.handle('open-file', async (event, filePath) => {
   if (!filePath) return
   const path = join(getDocumentFolder(), 'documents', basename(filePath))
   await shell.openPath(path) // opens PDF in default system app
 })
 
+/* Stats */
 ipcMain.handle('get-dashboard-state', async () => {
   // Total documents
   const [totalDocsRows] = await db.query(`SELECT COUNT(*) AS count FROM documents`)
@@ -982,6 +984,7 @@ ipcMain.handle('get-report-state', async (event, filters = {}) => {
   }
 })
 
+/* Backup */
 ipcMain.handle('start-backup', async (event, password = null) => {
   const sourceDir = getDocumentFolder()
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
@@ -1060,13 +1063,28 @@ ipcMain.handle('get-backup-state', async () => {
   }
 })
 
+/* Utils */
 ipcMain.handle('find-document', async (event, payload) => {
-  const { upazilaId, mouzaId, khatianNo, holdingNo, plotNo } = payload
+  const { id, upazilaId, mouzaId, khatianNo, holdingNo, plotNo } = payload
+  console.log(payload)
+
+  if (id && id.trim()) {
+    const [rows] = await db.execute(
+      `
+      SELECT *
+      FROM documents
+      WHERE id = ?
+      LIMIT 1
+      `,
+      [id.trim()]
+    )
+
+    return rows[0] || null
+  }
 
   if (!upazilaId) throw new Error('Upazila is required')
   if (!mouzaId) throw new Error('Mouza is required')
 
-  // At least one search field required
   if (!khatianNo?.trim() && !holdingNo?.trim() && !plotNo?.trim()) {
     throw new Error('Provide at least one of Khatian / Holding / Plot')
   }
@@ -1091,7 +1109,6 @@ ipcMain.handle('find-document', async (event, payload) => {
     params.push(plotNo.trim().toLowerCase())
   }
 
-  // Combine OR conditions
   if (searchConditions.length) {
     conditions.push(`(${searchConditions.join(' OR ')})`)
   }
@@ -1161,6 +1178,7 @@ ipcMain.handle('get-document-tree', async (event, rootId) => {
   return chain
 })
 
+/* Export */
 ipcMain.handle('export-documents', async (event, filters) => {
   const { format, upazilaId, mouzaId, volumeId, docType, searchQuery, rows = 100 } = filters
 
