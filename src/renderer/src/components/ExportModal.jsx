@@ -25,7 +25,7 @@ export default function ExportModal({ isOpen, onClose, filters = {}, totalRows =
 
   useEffect(() => {
     if (totalRows > 0) {
-      setRowsCount(Math.min(500, totalRows))
+      setRowsCount(Math.min(100, totalRows))
     }
   }, [totalRows])
 

@@ -81,17 +81,16 @@ ipcMain.handle('add-upazilla', async (event, name) => {
     return { success: false, message: 'Name is required' }
   }
 
-  const [exists] = await db.query('SELECT 1 FROM upazilas WHERE LOWER(name) = LOWER(?) LIMIT 1', [
-    normalizedName
-  ])
+  try {
+    await db.query('INSERT INTO upazilas (name) VALUES (?)', [normalizedName])
+    return { success: true }
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      return { success: false, message: 'Upazila already exists' }
+    }
 
-  if (exists.length > 0) {
-    return { success: false, message: 'Upazila already exists' }
+    return { success: false, message: `Something went wrong: ${err.message}` }
   }
-
-  await db.query('INSERT INTO upazilas (name) VALUES (?)', [normalizedName])
-
-  return { success: true }
 })
 
 ipcMain.handle('get-upazilas', async () => {
@@ -107,18 +106,24 @@ ipcMain.handle('update-upazila', async (event, { id, name }) => {
     return { success: false, message: 'Name is required' }
   }
 
-  const [exists] = await db.query(
-    'SELECT 1 FROM upazilas WHERE LOWER(name) = LOWER(?) AND id != ? LIMIT 1',
-    [normalizedName, id]
-  )
+  try {
+    const [result] = await db.query('UPDATE upazilas SET name = ? WHERE id = ?', [
+      normalizedName,
+      id
+    ])
 
-  if (exists.length > 0) {
-    return { success: false, message: 'Upazila already exists' }
+    if (result.affectedRows === 0) {
+      return { success: false, message: 'Upazila not found' }
+    }
+
+    return { success: true }
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      return { success: false, message: 'Upazila already exists' }
+    }
+
+    return { success: false, message: `Something went wrong: ${err.message}` }
   }
-
-  await db.query('UPDATE upazilas SET name = ? WHERE id = ?', [normalizedName, id])
-
-  return { success: true }
 })
 
 ipcMain.handle('delete-upazila', async (event, upazilaId) => {
@@ -135,29 +140,23 @@ ipcMain.handle('add-mouza', async (event, name, upazilaId) => {
     return { success: false, message: 'Name is required' }
   }
 
-  const [rows] = await db.query(
-    `
-    SELECT 1
-    FROM mouzas
-    WHERE LOWER(name) = LOWER(?) AND upazila_id = ?
-    LIMIT 1
-    `,
-    [normalizedName, upazilaId]
-  )
+  try {
+    await db.query(
+      `
+      INSERT INTO mouzas (name, upazila_id)
+      VALUES (?, ?)
+      `,
+      [normalizedName, upazilaId]
+    )
 
-  if (rows.length > 0) {
-    return { success: false, message: 'Mouza already exists in this upazila' }
+    return { success: true }
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      return { success: false, message: 'Mouza already exists in this upazila' }
+    }
+
+    return { success: false, message: `Something went wrong: ${err.message}` }
   }
-
-  await db.query(
-    `
-    INSERT INTO mouzas (name, upazila_id)
-    VALUES (?, ?)
-    `,
-    [normalizedName, upazilaId]
-  )
-
-  return { success: true }
 })
 
 ipcMain.handle('get-mouzas', async (event, upazilaId) => {
@@ -173,30 +172,28 @@ ipcMain.handle('update-mouza', async (event, { id, name, upazilaId }) => {
     return { success: false, message: 'Name is required' }
   }
 
-  const [rows] = await db.query(
-    `
-    SELECT 1
-    FROM mouzas
-    WHERE LOWER(name) = LOWER(?) AND upazila_id = ? AND id != ?
-    LIMIT 1
-    `,
-    [normalizedName, upazilaId, id]
-  )
+  try {
+    const [result] = await db.query(
+      `
+      UPDATE mouzas
+      SET name = ?, upazila_id = ?
+      WHERE id = ?
+      `,
+      [normalizedName, upazilaId, id]
+    )
 
-  if (rows.length > 0) {
-    return { success: false, message: 'Mouza already exists in this upazila' }
+    if (result.affectedRows === 0) {
+      return { success: false, message: 'Mouza not found' }
+    }
+
+    return { success: true }
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      return { success: false, message: 'Mouza already exists in this upazila' }
+    }
+
+    return { success: false, message: `Something went wrong: ${err.message}` }
   }
-
-  await db.query(
-    `
-    UPDATE mouzas
-    SET name = ?, upazila_id = ?
-    WHERE id = ?
-    `,
-    [normalizedName, upazilaId, id]
-  )
-
-  return { success: true }
 })
 
 ipcMain.handle('delete-mouza', async (event, mouzaId) => {
@@ -213,29 +210,23 @@ ipcMain.handle('add-volume', async (event, name, upazilaId) => {
     return { success: false, message: 'Name is required' }
   }
 
-  const [rows] = await db.query(
-    `
-    SELECT 1
-    FROM volumes
-    WHERE LOWER(name) = LOWER(?) AND upazila_id = ?
-    LIMIT 1
-    `,
-    [normalizedName, upazilaId]
-  )
+  try {
+    await db.query(
+      `
+      INSERT INTO volumes (name, upazila_id)
+      VALUES (?, ?)
+      `,
+      [normalizedName, upazilaId]
+    )
 
-  if (rows.length > 0) {
-    return { success: false, message: 'Volume already exists in this upazila' }
+    return { success: true }
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      return { success: false, message: 'Volume already exists in this upazila' }
+    }
+
+    return { success: false, message: `Something went wrong: ${err.message}` }
   }
-
-  await db.query(
-    `
-    INSERT INTO volumes (name, upazila_id)
-    VALUES (?, ?)
-    `,
-    [normalizedName, upazilaId]
-  )
-
-  return { success: true }
 })
 
 ipcMain.handle('get-volumes', async (event, upazilaId) => {
@@ -251,30 +242,28 @@ ipcMain.handle('update-volume', async (event, { id, name, upazilaId }) => {
     return { success: false, message: 'Name is required' }
   }
 
-  const [rows] = await db.query(
-    `
-    SELECT 1
-    FROM volumes
-    WHERE LOWER(name) = LOWER(?) AND upazila_id = ? AND id != ?
-    LIMIT 1
-    `,
-    [normalizedName, upazilaId, id]
-  )
+  try {
+    const [result] = await db.query(
+      `
+      UPDATE volumes
+      SET name = ?, upazila_id = ?
+      WHERE id = ?
+      `,
+      [normalizedName, upazilaId, id]
+    )
 
-  if (rows.length > 0) {
-    return { success: false, message: 'Volume already exists in this upazila' }
+    if (result.affectedRows === 0) {
+      return { success: false, message: 'Volume not found' }
+    }
+
+    return { success: true }
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      return { success: false, message: 'Volume already exists in this upazila' }
+    }
+
+    return { success: false, message: `Something went wrong: ${err.message}` }
   }
-
-  await db.query(
-    `
-    UPDATE volumes
-    SET name = ?, upazila_id = ?
-    WHERE id = ?
-    `,
-    [normalizedName, upazilaId, id]
-  )
-
-  return { success: true }
 })
 
 ipcMain.handle('delete-volume', async (event, volumeId) => {
@@ -436,7 +425,6 @@ ipcMain.handle('upload-document', async (event, payload) => {
 
 ipcMain.handle('get-documents', async (event, filters = {}) => {
   const { upazilaId, mouzaId, volumeId, docType, searchQuery, page = 1, pageSize = 10 } = filters
-
   const offset = (page - 1) * pageSize
 
   const conditions = []
@@ -459,22 +447,45 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
     params.push(docType)
   }
   if (searchQuery) {
-    const q = `%${searchQuery.toLowerCase()}%`
+    const q = `%${searchQuery}%`
+
     conditions.push(`(
-      LOWER(d.khatian_no) LIKE ?
-      OR LOWER(d.dag_no) LIKE ?
-      OR LOWER(d.holding_no) LIKE ?
-    )`)
+  d.khatian_no LIKE ?
+  OR d.dag_no LIKE ?
+  OR d.holding_no LIKE ?
+)`)
     params.push(q, q, q)
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
-  const query = `
+  // Find only needed ids
+  const [idRows] = await db.query(
+    `SELECT d.id FROM documents d ${whereClause} ORDER BY d.id DESC LIMIT ? OFFSET ?`,
+    [...params, pageSize, offset]
+  )
+  const ids = idRows.map((r) => r.id)
+
+  // total count
+  const [countRows] = await db.query(
+    `SELECT COUNT(*) as count FROM documents d ${whereClause}`,
+    params
+  )
+  const total = countRows[0].count
+
+  if (ids.length === 0) {
+    return { data: [], total, page, pageSize }
+  }
+
+  const idPlaceholders = ids.map(() => '?').join(',')
+
+  // Recurrsion for this page only
+  const detailQuery = `
     WITH RECURSIVE down_chain (root_id, next_id, path) AS (
-      SELECT id AS root_id, next_document_id, CONCAT('|', id, '|') AS path
+      SELECT id AS root_id, next_document_id AS next_id, CONCAT('|', id, '|') AS path
       FROM documents
-      WHERE next_document_id IS NOT NULL
+      WHERE id IN (${idPlaceholders})
+        AND next_document_id IS NOT NULL
 
       UNION ALL
 
@@ -485,7 +496,7 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
         AND LOCATE(CONCAT('|', d.id, '|'), dc.path) = 0
     )
 
-    SELECT 
+    SELECT
       d.*,
       u.name AS upazilaName,
       m.name AS mouzaName,
@@ -499,25 +510,24 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
     LEFT JOIN volumes v ON d.volume_id = v.id
 
     LEFT JOIN (
-      SELECT 
+      SELECT
         document_id,
         GROUP_CONCAT(CONCAT(id, '::', file_name, '::', file_path) SEPARATOR '|') AS files
       FROM document_files
+      WHERE document_id IN (${idPlaceholders})
       GROUP BY document_id
     ) f ON f.document_id = d.id
 
     LEFT JOIN down_chain dc ON dc.root_id = d.id
 
-    ${whereClause}
+    WHERE d.id IN (${idPlaceholders})
 
     GROUP BY d.id
     ORDER BY d.id DESC
-    LIMIT ? OFFSET ?
   `
 
-  const [documents] = await db.query(query, [...params, pageSize, offset])
+  const [documents] = await db.query(detailQuery, [...ids, ...ids, ...ids])
 
-  // Parse files
   const result = documents.map((doc) => {
     const files = doc.files
       ? doc.files.split('|').map((str) => {
@@ -525,17 +535,8 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
           return { id: Number(id), file_name, file_path }
         })
       : []
-
     return { ...doc, files }
   })
-
-  // total count
-  const [countRows] = await db.query(
-    `SELECT COUNT(*) as count FROM documents d ${whereClause}`,
-    params
-  )
-
-  const total = countRows[0].count
 
   return { data: result, total, page, pageSize }
 })
@@ -1066,7 +1067,6 @@ ipcMain.handle('get-backup-state', async () => {
 /* Utils */
 ipcMain.handle('find-document', async (event, payload) => {
   const { id, upazilaId, mouzaId, khatianNo, holdingNo, plotNo } = payload
-  console.log(payload)
 
   if (id && id.trim()) {
     const [rows] = await db.execute(

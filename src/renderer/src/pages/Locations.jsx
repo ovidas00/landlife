@@ -78,13 +78,12 @@ export default function Locations() {
 
             if (result?.success) {
               loadUpazilas()
-              showSuccess('Upazila deleted')
+              showSuccess(result?.message || 'Upazila deleted')
             } else {
-              showError('Failed to delete upazila')
+              showError(result?.message || 'Failed to delete upazila')
             }
           } catch (err) {
-            console.error(err)
-            showError('Failed to delete upazila')
+            showError(err?.message || 'Failed to delete upazila')
           } finally {
             setConfirmUpazila(false)
           }
@@ -101,13 +100,12 @@ export default function Locations() {
 
             if (result?.success) {
               loadMouzas(selectedUpazila)
-              showSuccess('Mouza deleted')
+              showSuccess(result?.message || 'Mouza deleted')
             } else {
-              showError('Failed to delete mouza')
+              showError(result?.message || 'Failed to delete mouza')
             }
           } catch (err) {
-            console.error(err)
-            showError('Failed to delete mouza')
+            showError(err?.message || 'Failed to delete mouza')
           } finally {
             setConfirmMouza(false)
           }
@@ -124,13 +122,12 @@ export default function Locations() {
 
             if (result?.success) {
               loadVolumes(selectedUpazilaVolume)
-              showSuccess('Volume deleted')
+              showSuccess(result?.message || 'Volume deleted')
             } else {
-              showError('Failed to delete volume')
+              showError(result?.message || 'Failed to delete volume')
             }
           } catch (err) {
-            console.error(err)
-            showError('Failed to delete volume')
+            showError(err?.message || 'Failed to delete volume')
           } finally {
             setConfirmVolume(false)
           }
@@ -149,13 +146,12 @@ export default function Locations() {
 
             if (result?.success) {
               loadUpazilas()
-              showSuccess('Upazila updated')
+              showSuccess(result?.mesage || 'Upazila updated')
             } else {
-              showError('Failed to update upazila')
+              showError(result?.message || 'Failed to update upazila')
             }
           } catch (err) {
-            console.error(err)
-            showError('Failed to update upazila')
+            showError(err?.message || 'Failed to update upazila')
           } finally {
             setUpdateUpazilaOpen(false)
           }
@@ -181,13 +177,12 @@ export default function Locations() {
 
             if (result?.success) {
               loadMouzas(selectedUpazila)
-              showSuccess('Mouza updated')
+              showSuccess(result?.message || 'Mouza updated')
             } else {
-              showError('Failed to update mouza')
+              showError(result?.message || 'Failed to update mouza')
             }
           } catch (err) {
-            console.error(err)
-            showError('Failed to update mouza')
+            showError(err?.message || 'Failed to update mouza')
           } finally {
             setUpdateMouzaOpen(false)
           }
@@ -213,13 +208,12 @@ export default function Locations() {
 
             if (result?.success) {
               loadVolumes(selectedUpazilaVolume)
-              showSuccess('Volume updated')
+              showSuccess(result?.message || 'Volume updated')
             } else {
-              showError('Failed to update volume')
+              showError(result?.message || 'Failed to update volume')
             }
           } catch (err) {
-            console.error(err)
-            showError('Failed to update volume')
+            showError(err?.message || 'Failed to update volume')
           } finally {
             setUpdateVolumeOpen(false)
           }
