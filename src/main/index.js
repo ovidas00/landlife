@@ -291,36 +291,25 @@ ipcMain.handle('upload-document', async (event, payload) => {
   const baseDir = join(getDocumentFolder(), 'documents')
   if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
 
-  // Prevent invalid cycle
-  if (previousDocumentId && nextDocumentId && previousDocumentId === nextDocumentId) {
-    return { success: false, message: 'Previous and next document cannot be the same' }
-  }
-
   // isValidPosition
   async function isValidPosition(previousId, nextId) {
     if (!previousId || !nextId) return true
+    if (previousId === nextId) return false
 
-    let [rows] = await db.execute('SELECT id, next_document_id FROM documents WHERE id = ?', [
-      previousId
-    ])
+    const [rows] = await db.execute('SELECT id, next_document_id FROM documents')
 
-    let current = rows[0]
+    const nextMap = new Map(rows.map((r) => [r.id, r.next_document_id]))
+
     const visited = new Set()
+    let currentId = previousId
 
-    while (current) {
-      if (visited.has(current.id)) return false
-      visited.add(current.id)
+    while (currentId != null) {
+      if (visited.has(currentId)) return false
+      visited.add(currentId)
 
-      if (current.id === nextId) return true
+      if (currentId === nextId) return true
 
-      if (!current.next_document_id) break
-
-      const [nextRows] = await db.execute(
-        'SELECT id, next_document_id FROM documents WHERE id = ?',
-        [current.next_document_id]
-      )
-
-      current = nextRows[0]
+      currentId = nextMap.get(currentId)
     }
 
     return false
@@ -641,36 +630,25 @@ ipcMain.handle('update-document', async (event, payload) => {
   // isValidPosition
   async function isValidPosition(previousId, nextId) {
     if (!previousId || !nextId) return true
+    if (previousId === nextId) return false
 
-    let [rows] = await db.execute('SELECT id, next_document_id FROM documents WHERE id = ?', [
-      previousId
-    ])
+    const [rows] = await db.execute('SELECT id, next_document_id FROM documents')
 
-    let current = rows[0]
+    const nextMap = new Map(rows.map((r) => [r.id, r.next_document_id]))
+
     const visited = new Set()
+    let currentId = previousId
 
-    while (current) {
-      if (visited.has(current.id)) return false
-      visited.add(current.id)
+    while (currentId != null) {
+      if (visited.has(currentId)) return false
+      visited.add(currentId)
 
-      if (current.id === nextId) return true
+      if (currentId === nextId) return true
 
-      if (!current.next_document_id) break
-
-      const [nextRows] = await db.execute(
-        'SELECT id, next_document_id FROM documents WHERE id = ?',
-        [current.next_document_id]
-      )
-
-      current = nextRows[0]
+      currentId = nextMap.get(currentId)
     }
 
     return false
-  }
-
-  // Validations
-  if (previousDocumentId && nextDocumentId && previousDocumentId === nextDocumentId) {
-    return { success: false, message: 'Previous and next document cannot be the same' }
   }
 
   if (previousDocumentId === id || nextDocumentId === id) {
@@ -1033,8 +1011,6 @@ ipcMain.handle('start-backup-regional', async (event, { password = null, upazila
 })
 
 ipcMain.handle('get-backup-state', async () => {
-  const db = await getDB()
-
   // Overall stats
   const [totalRows] = await db.execute(`
     SELECT 
@@ -1095,18 +1071,18 @@ ipcMain.handle('find-document', async (event, payload) => {
   const searchConditions = []
 
   if (khatianNo && khatianNo.trim()) {
-    searchConditions.push('LOWER(khatian_no) = ?')
-    params.push(khatianNo.trim().toLowerCase())
+    searchConditions.push('khatian_no = ?')
+    params.push(khatianNo.trim())
   }
 
   if (holdingNo && holdingNo.trim()) {
-    searchConditions.push('LOWER(holding_no) = ?')
-    params.push(holdingNo.trim().toLowerCase())
+    searchConditions.push('holding_no = ?')
+    params.push(holdingNo.trim())
   }
 
   if (plotNo && plotNo.trim()) {
-    searchConditions.push('LOWER(dag_no) = ?')
-    params.push(plotNo.trim().toLowerCase())
+    searchConditions.push('dag_no = ?')
+    params.push(plotNo.trim())
   }
 
   if (searchConditions.length) {
@@ -1133,44 +1109,44 @@ ipcMain.handle('get-document-tree', async (event, rootId) => {
 
   const [chain] = await db.execute(
     `
-    WITH RECURSIVE document_tree (
-      id, khatian_no, holding_no, dag_no, volume_id, next_document_id, path
-    ) AS (
-      -- Root document
-      SELECT 
-        id, 
-        khatian_no, 
-        holding_no, 
-        dag_no, 
-        volume_id, 
-        next_document_id, 
-        CONCAT('|', id, '|') AS path
-      FROM documents
-      WHERE id = ?
+   WITH RECURSIVE document_tree AS (
+  -- Root
+  SELECT 
+    id,
+    khatian_no,
+    holding_no,
+    dag_no,
+    volume_id,
+    next_document_id,
+    0 AS depth
+  FROM documents
+  WHERE id = ?
 
-      UNION ALL
+  UNION ALL
 
-      -- Traverse forward safely (avoid cycles)
-      SELECT 
-        d.id, 
-        d.khatian_no, 
-        d.holding_no, 
-        d.dag_no, 
-        d.volume_id, 
-        d.next_document_id, 
-        CONCAT(dt.path, d.id, '|')
-      FROM document_tree dt
-      JOIN documents d ON dt.next_document_id = d.id
-      WHERE INSTR(dt.path, CONCAT('|', d.id, '|')) = 0
-    )
-    SELECT 
-      dt.id, 
-      dt.khatian_no, 
-      dt.holding_no, 
-      dt.dag_no, 
-      v.name AS volumeName
-    FROM document_tree dt
-    LEFT JOIN volumes v ON dt.volume_id = v.id
+  -- Forward traversal
+  SELECT 
+    d.id,
+    d.khatian_no,
+    d.holding_no,
+    d.dag_no,
+    d.volume_id,
+    d.next_document_id,
+    dt.depth + 1
+  FROM document_tree dt
+  JOIN documents d 
+    ON dt.next_document_id = d.id
+  WHERE dt.depth < 100   -- safety limit
+)
+
+SELECT 
+  dt.id,
+  dt.khatian_no,
+  dt.holding_no,
+  dt.dag_no,
+  v.name AS volumeName
+FROM document_tree dt
+LEFT JOIN volumes v ON dt.volume_id = v.id
     `,
     [rootId]
   )
@@ -1256,7 +1232,7 @@ ipcMain.handle('export-documents', async (event, filters) => {
   LEFT JOIN volumes v ON d.volume_id = v.id
   ${whereClause}
   ORDER BY d.id DESC
-  LIMIT ${limit}   -- ✅ inject, not bind
+  LIMIT ${limit}   
   `,
     params
   )
@@ -1322,8 +1298,6 @@ ipcMain.handle('export-documents', async (event, filters) => {
 })
 
 ipcMain.handle('export-document-tree', async (event, rootId) => {
-  const db = await getDB()
-
   if (!rootId) throw new Error('Document ID is required')
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
@@ -1338,59 +1312,57 @@ ipcMain.handle('export-document-tree', async (event, rootId) => {
 
   const [documents] = await db.execute(
     `
-    WITH RECURSIVE document_tree AS (
-      -- Root
-      SELECT
-        d.id,
-        d.upazila_id,
-        d.mouza_id,
-        d.volume_id,
-        d.khatian_no,
-        d.holding_no,
-        d.dag_no,
-        d.doc_type,
-        d.remarks,
-        d.created_at,
-        d.updated_at,
-        d.next_document_id,
-        CONCAT('|', d.id, '|') AS path
-      FROM documents d
-      WHERE d.id = ?
+   WITH RECURSIVE document_tree AS (
+  -- Root
+  SELECT
+    d.id,
+    d.upazila_id,
+    d.mouza_id,
+    d.volume_id,
+    d.khatian_no,
+    d.holding_no,
+    d.dag_no,
+    d.doc_type,
+    d.remarks,
+    d.created_at,
+    d.updated_at,
+    d.next_document_id,
+    0 AS depth
+  FROM documents d
+  WHERE d.id = ?
 
-      UNION ALL
+  UNION ALL
 
-      -- Traverse next_document_id
-      SELECT
-        d.id,
-        d.upazila_id,
-        d.mouza_id,
-        d.volume_id,
-        d.khatian_no,
-        d.holding_no,
-        d.dag_no,
-        d.doc_type,
-        d.remarks,
-        d.created_at,
-        d.updated_at,
-        d.next_document_id,
-        CONCAT(dt.path, d.id, '|') AS path
-      FROM document_tree dt
-      JOIN documents d ON dt.next_document_id = d.id
+  -- Traverse next_document_id
+  SELECT
+    d.id,
+    d.upazila_id,
+    d.mouza_id,
+    d.volume_id,
+    d.khatian_no,
+    d.holding_no,
+    d.dag_no,
+    d.doc_type,
+    d.remarks,
+    d.created_at,
+    d.updated_at,
+    d.next_document_id,
+    dt.depth + 1
+  FROM document_tree dt
+  JOIN documents d ON dt.next_document_id = d.id
+  WHERE dt.depth < 100   -- prevent infinite loop
+)
 
-      -- Prevent infinite loop
-      WHERE LOCATE(CONCAT('|', d.id, '|'), dt.path) = 0
-    )
-
-    SELECT
-      dt.*,
-      u.name AS upazilaName,
-      m.name AS mouzaName,
-      v.name AS volumeName
-    FROM document_tree dt
-    LEFT JOIN upazilas u ON dt.upazila_id = u.id
-    LEFT JOIN mouzas m ON dt.mouza_id = m.id
-    LEFT JOIN volumes v ON dt.volume_id = v.id
-    ORDER BY dt.id
+SELECT
+  dt.*,
+  u.name AS upazilaName,
+  m.name AS mouzaName,
+  v.name AS volumeName
+FROM document_tree dt
+LEFT JOIN upazilas u ON dt.upazila_id = u.id
+LEFT JOIN mouzas m ON dt.mouza_id = m.id
+LEFT JOIN volumes v ON dt.volume_id = v.id
+ORDER BY dt.depth
     `,
     [rootId]
   )

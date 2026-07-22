@@ -82,7 +82,7 @@ export default function RecordsSearch() {
     searchTimeout.current = setTimeout(() => {
       setPage(1)
       loadDocuments()
-    }, 300)
+    }, 500)
 
     return () => clearTimeout(searchTimeout.current)
   }, [searchQuery])
