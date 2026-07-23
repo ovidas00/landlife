@@ -27,7 +27,7 @@ export default function RecordsSearch() {
 
   // Pagination state
   const [page, setPage] = useState(1)
-  const [pageSize] = useState(25)
+  const [pageSize] = useState(20)
   const [total, setTotal] = useState(0)
 
   const searchTimeout = useRef(null)

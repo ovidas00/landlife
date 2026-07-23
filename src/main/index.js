@@ -413,121 +413,134 @@ ipcMain.handle('upload-document', async (event, payload) => {
 })
 
 ipcMain.handle('get-documents', async (event, filters = {}) => {
-  const { upazilaId, mouzaId, volumeId, docType, searchQuery, page = 1, pageSize = 10 } = filters
-  const offset = (page - 1) * pageSize
+  try {
+    const { upazilaId, mouzaId, volumeId, docType, searchQuery, page = 1, pageSize = 20 } = filters
+    const offset = (page - 1) * pageSize
 
-  const conditions = []
-  const params = []
+    const conditions = []
+    const params = []
 
-  if (upazilaId) {
-    conditions.push('d.upazila_id = ?')
-    params.push(upazilaId)
-  }
-  if (mouzaId) {
-    conditions.push('d.mouza_id = ?')
-    params.push(mouzaId)
-  }
-  if (volumeId) {
-    conditions.push('d.volume_id = ?')
-    params.push(volumeId)
-  }
-  if (docType) {
-    conditions.push('d.doc_type = ?')
-    params.push(docType)
-  }
-  if (searchQuery) {
-    const q = `%${searchQuery}%`
-
-    conditions.push(`(
+    if (upazilaId) {
+      conditions.push('d.upazila_id = ?')
+      params.push(upazilaId)
+    }
+    if (mouzaId) {
+      conditions.push('d.mouza_id = ?')
+      params.push(mouzaId)
+    }
+    if (volumeId) {
+      conditions.push('d.volume_id = ?')
+      params.push(volumeId)
+    }
+    if (docType) {
+      conditions.push('d.doc_type = ?')
+      params.push(docType)
+    }
+    if (searchQuery) {
+      const q = `%${searchQuery}%`
+      conditions.push(`(
   d.khatian_no LIKE ?
   OR d.dag_no LIKE ?
   OR d.holding_no LIKE ?
 )`)
-    params.push(q, q, q)
-  }
+      params.push(q, q, q)
+    }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
-  // Find only needed ids
-  const [idRows] = await db.query(
-    `SELECT d.id FROM documents d ${whereClause} ORDER BY d.id DESC LIMIT ? OFFSET ?`,
-    [...params, pageSize, offset]
-  )
-  const ids = idRows.map((r) => r.id)
+    // Find only needed ids
+    const [idRows] = await db.query(
+      `SELECT d.id FROM documents d ${whereClause} ORDER BY d.id DESC LIMIT ? OFFSET ?`,
+      [...params, pageSize, offset]
+    )
+    const ids = idRows.map((r) => r.id)
 
-  // total count
-  const [countRows] = await db.query(
-    `SELECT COUNT(*) as count FROM documents d ${whereClause}`,
-    params
-  )
-  const total = countRows[0].count
+    // total count
+    const [countRows] = await db.query(
+      `SELECT COUNT(*) as count FROM documents d ${whereClause}`,
+      params
+    )
+    const total = countRows[0].count
 
-  if (ids.length === 0) {
-    return { data: [], total, page, pageSize }
-  }
+    if (ids.length === 0) {
+      return { data: [], total, page, pageSize }
+    }
 
-  const idPlaceholders = ids.map(() => '?').join(',')
+    const idPlaceholders = ids.map(() => '?').join(',')
 
-  // Recurrsion for this page only
-  const detailQuery = `
-    WITH RECURSIVE down_chain (root_id, next_id, path) AS (
-      SELECT id AS root_id, next_document_id AS next_id, CONCAT('|', id, '|') AS path
-      FROM documents
-      WHERE id IN (${idPlaceholders})
-        AND next_document_id IS NOT NULL
+    // Documents
+    const documentsQuery = `
+      SELECT
+        d.*,
+        u.name AS upazilaName,
+        m.name AS mouzaName,
+        v.name AS volumeName
+      FROM documents d
+      LEFT JOIN upazilas u ON d.upazila_id = u.id
+      LEFT JOIN mouzas m ON d.mouza_id = m.id
+      LEFT JOIN volumes v ON d.volume_id = v.id
+      WHERE d.id IN (${idPlaceholders})
+      ORDER BY d.id DESC
+    `
+    const [documents] = await db.query(documentsQuery, ids)
 
-      UNION ALL
+    // Relation counts
+    const relationQuery = `
+      WITH RECURSIVE down_chain (root_id, next_id, path) AS (
+        SELECT id AS root_id, next_document_id AS next_id, CAST(CONCAT('|', id, '|') AS CHAR(4000)) AS path
+        FROM documents
+        WHERE id IN (${idPlaceholders})
+          AND next_document_id IS NOT NULL
 
-      SELECT dc.root_id, d.next_document_id, CONCAT(dc.path, d.id, '|')
-      FROM down_chain dc
-      JOIN documents d ON dc.next_id = d.id
-      WHERE d.next_document_id IS NOT NULL
-        AND LOCATE(CONCAT('|', d.id, '|'), dc.path) = 0
+        UNION ALL
+
+        SELECT dc.root_id, d.next_document_id, CONCAT(dc.path, d.id, '|')
+        FROM down_chain dc
+        JOIN documents d ON dc.next_id = d.id
+        WHERE d.next_document_id IS NOT NULL
+          AND LOCATE(CONCAT('|', d.id, '|'), dc.path) = 0
+      )
+      SELECT root_id, COUNT(*) AS relation_count
+      FROM down_chain
+      GROUP BY root_id
+    `
+    const [relationRows] = await db.query(relationQuery, ids)
+
+    const relationByDoc = {}
+    for (const row of relationRows) {
+      relationByDoc[row.root_id] = row.relation_count
+    }
+
+    // Files
+    const [fileRows] = await db.query(
+      `SELECT id, document_id, file_name, file_path
+       FROM document_files
+       WHERE document_id IN (${idPlaceholders})`,
+      ids
     )
 
-    SELECT
-      d.*,
-      u.name AS upazilaName,
-      m.name AS mouzaName,
-      v.name AS volumeName,
-      COALESCE(f.files, '') AS files,
-      COUNT(dc.next_id) AS relation_count
+    const filesByDoc = {}
+    for (const row of fileRows) {
+      if (!filesByDoc[row.document_id]) filesByDoc[row.document_id] = []
+      filesByDoc[row.document_id].push({
+        id: row.id,
+        file_name: row.file_name,
+        file_path: row.file_path
+      })
+    }
 
-    FROM documents d
-    LEFT JOIN upazilas u ON d.upazila_id = u.id
-    LEFT JOIN mouzas m ON d.mouza_id = m.id
-    LEFT JOIN volumes v ON d.volume_id = v.id
+    // Merge everything
+    const result = documents.map((doc) => ({
+      ...doc,
+      relation_count: relationByDoc[doc.id] || 0,
+      files: filesByDoc[doc.id] || []
+    }))
 
-    LEFT JOIN (
-      SELECT
-        document_id,
-        GROUP_CONCAT(CONCAT(id, '::', file_name, '::', file_path) SEPARATOR '|') AS files
-      FROM document_files
-      WHERE document_id IN (${idPlaceholders})
-      GROUP BY document_id
-    ) f ON f.document_id = d.id
-
-    LEFT JOIN down_chain dc ON dc.root_id = d.id
-
-    WHERE d.id IN (${idPlaceholders})
-
-    GROUP BY d.id
-    ORDER BY d.id DESC
-  `
-
-  const [documents] = await db.query(detailQuery, [...ids, ...ids, ...ids])
-
-  const result = documents.map((doc) => {
-    const files = doc.files
-      ? doc.files.split('|').map((str) => {
-          const [id, file_name, file_path] = str.split('::')
-          return { id: Number(id), file_name, file_path }
-        })
-      : []
-    return { ...doc, files }
-  })
-
-  return { data: result, total, page, pageSize }
+    return { data: result, total, page, pageSize }
+  } catch (err) {
+    console.error('get-documents failed:', err)
+    throw new Error('Failed to load documents. Please try again.')
+  }
 })
 
 ipcMain.handle('get-document-by-id', async (event, documentId) => {
@@ -1107,51 +1120,54 @@ ipcMain.handle('find-document', async (event, payload) => {
 ipcMain.handle('get-document-tree', async (event, rootId) => {
   if (!rootId) throw new Error('Document ID is required')
 
-  const [chain] = await db.execute(
-    `
-   WITH RECURSIVE document_tree AS (
-  -- Root
-  SELECT 
-    id,
-    khatian_no,
-    holding_no,
-    dag_no,
-    volume_id,
-    next_document_id,
-    0 AS depth
-  FROM documents
-  WHERE id = ?
+  try {
+    const [chain] = await db.execute(
+      `
+      WITH RECURSIVE document_tree AS (
+        SELECT 
+          id,
+          khatian_no,
+          holding_no,
+          dag_no,
+          volume_id,
+          next_document_id,
+          0 AS depth
+        FROM documents
+        WHERE id = ?
 
-  UNION ALL
+        UNION ALL
 
-  -- Forward traversal
-  SELECT 
-    d.id,
-    d.khatian_no,
-    d.holding_no,
-    d.dag_no,
-    d.volume_id,
-    d.next_document_id,
-    dt.depth + 1
-  FROM document_tree dt
-  JOIN documents d 
-    ON dt.next_document_id = d.id
-  WHERE dt.depth < 100   -- safety limit
-)
+        SELECT 
+          d.id,
+          d.khatian_no,
+          d.holding_no,
+          d.dag_no,
+          d.volume_id,
+          d.next_document_id,
+          dt.depth + 1
+        FROM document_tree dt
+        JOIN documents d 
+          ON dt.next_document_id = d.id
+        WHERE dt.depth < 100
+      )
 
-SELECT 
-  dt.id,
-  dt.khatian_no,
-  dt.holding_no,
-  dt.dag_no,
-  v.name AS volumeName
-FROM document_tree dt
-LEFT JOIN volumes v ON dt.volume_id = v.id
-    `,
-    [rootId]
-  )
+      SELECT 
+        dt.id,
+        dt.khatian_no,
+        dt.holding_no,
+        dt.dag_no,
+        v.name AS volumeName
+      FROM document_tree dt
+      LEFT JOIN volumes v ON dt.volume_id = v.id
+      `,
+      [rootId]
+    )
 
-  return chain
+    return chain
+  } catch (err) {
+    console.error('get-document-tree failed:', err)
+    throw new Error('Failed to load document chain. Please try again.')
+  }
 })
 
 /* Export */
@@ -1300,93 +1316,91 @@ ipcMain.handle('export-documents', async (event, filters) => {
 ipcMain.handle('export-document-tree', async (event, rootId) => {
   if (!rootId) throw new Error('Document ID is required')
 
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-  const defaultName = `document-tree-${rootId}-${timestamp}.pdf`
-
-  const { canceled, filePath } = await dialog.showSaveDialog({
-    title: 'Save document tree',
-    defaultPath: join(app.getPath('downloads'), defaultName)
-  })
-
-  if (canceled || !filePath) return { success: false }
-
-  const [documents] = await db.execute(
-    `
-   WITH RECURSIVE document_tree AS (
-  -- Root
-  SELECT
-    d.id,
-    d.upazila_id,
-    d.mouza_id,
-    d.volume_id,
-    d.khatian_no,
-    d.holding_no,
-    d.dag_no,
-    d.doc_type,
-    d.remarks,
-    d.created_at,
-    d.updated_at,
-    d.next_document_id,
-    0 AS depth
-  FROM documents d
-  WHERE d.id = ?
-
-  UNION ALL
-
-  -- Traverse next_document_id
-  SELECT
-    d.id,
-    d.upazila_id,
-    d.mouza_id,
-    d.volume_id,
-    d.khatian_no,
-    d.holding_no,
-    d.dag_no,
-    d.doc_type,
-    d.remarks,
-    d.created_at,
-    d.updated_at,
-    d.next_document_id,
-    dt.depth + 1
-  FROM document_tree dt
-  JOIN documents d ON dt.next_document_id = d.id
-  WHERE dt.depth < 100   -- prevent infinite loop
-)
-
-SELECT
-  dt.*,
-  u.name AS upazilaName,
-  m.name AS mouzaName,
-  v.name AS volumeName
-FROM document_tree dt
-LEFT JOIN upazilas u ON dt.upazila_id = u.id
-LEFT JOIN mouzas m ON dt.mouza_id = m.id
-LEFT JOIN volumes v ON dt.volume_id = v.id
-ORDER BY dt.depth
-    `,
-    [rootId]
-  )
-
-  if (!documents.length) {
-    return { success: false, message: 'No related documents found.' }
-  }
-
-  // Format for pdf
-  const tableData = [
-    ['#', 'Upazila', 'Mouza', 'Volume', 'Khatian', 'Holding', 'Plot', 'Type'],
-    ...documents.map((d) => [
-      d.id,
-      d.upazilaName,
-      d.mouzaName,
-      d.volumeName,
-      d.khatian_no || 'N/A',
-      d.holding_no || 'N/A',
-      d.dag_no || 'N/A',
-      d.doc_type ? d.doc_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : 'N/A'
-    ])
-  ]
-
   try {
+    const [documents] = await db.execute(
+      `
+      WITH RECURSIVE document_tree AS (
+        SELECT
+          d.id,
+          d.upazila_id,
+          d.mouza_id,
+          d.volume_id,
+          d.khatian_no,
+          d.holding_no,
+          d.dag_no,
+          d.doc_type,
+          d.remarks,
+          d.created_at,
+          d.updated_at,
+          d.next_document_id,
+          0 AS depth
+        FROM documents d
+        WHERE d.id = ?
+
+        UNION ALL
+
+        SELECT
+          d.id,
+          d.upazila_id,
+          d.mouza_id,
+          d.volume_id,
+          d.khatian_no,
+          d.holding_no,
+          d.dag_no,
+          d.doc_type,
+          d.remarks,
+          d.created_at,
+          d.updated_at,
+          d.next_document_id,
+          dt.depth + 1
+        FROM document_tree dt
+        JOIN documents d ON dt.next_document_id = d.id
+        WHERE dt.depth < 100
+      )
+
+      SELECT
+        dt.*,
+        u.name AS upazilaName,
+        m.name AS mouzaName,
+        v.name AS volumeName
+      FROM document_tree dt
+      LEFT JOIN upazilas u ON dt.upazila_id = u.id
+      LEFT JOIN mouzas m ON dt.mouza_id = m.id
+      LEFT JOIN volumes v ON dt.volume_id = v.id
+      ORDER BY dt.depth
+      `,
+      [rootId]
+    )
+
+    if (!documents.length) {
+      return { success: false, message: 'No related documents found.' }
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const defaultName = `document-tree-${rootId}-${timestamp}.pdf`
+
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      title: 'Save document tree',
+      defaultPath: join(app.getPath('downloads'), defaultName)
+    })
+
+    if (canceled || !filePath) return { success: false }
+
+    // Format for pdf
+    const tableData = [
+      ['#', 'Upazila', 'Mouza', 'Volume', 'Khatian', 'Holding', 'Plot', 'Type'],
+      ...documents.map((d) => [
+        d.id,
+        d.upazilaName,
+        d.mouzaName,
+        d.volumeName,
+        d.khatian_no || 'N/A',
+        d.holding_no || 'N/A',
+        d.dag_no || 'N/A',
+        d.doc_type ? d.doc_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : 'N/A'
+      ])
+    ]
+
     const success = await exportToPDF({
       tableData,
       columnWidths: [45, '*', 60, 60, 75, 50, 55, 55],
@@ -1396,6 +1410,6 @@ ORDER BY dt.depth
     return { success }
   } catch (err) {
     console.error('Export failed:', err)
-    return { success: false }
+    return { success: false, message: 'Failed to export document tree.' }
   }
 })

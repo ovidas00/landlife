@@ -6,7 +6,7 @@ export default function ExportModal({ isOpen, onClose, filters = {}, totalRows =
   const [loadingType, setLoadingType] = useState(null)
 
   const [rowsMode, setRowsMode] = useState('custom')
-  const [rowsCount, setRowsCount] = useState(Math.min(500, totalRows))
+  const [rowsCount, setRowsCount] = useState(Math.min(50, totalRows))
 
   const exporting = loadingType !== null
 
@@ -25,7 +25,7 @@ export default function ExportModal({ isOpen, onClose, filters = {}, totalRows =
 
   useEffect(() => {
     if (totalRows > 0) {
-      setRowsCount(Math.min(100, totalRows))
+      setRowsCount(Math.min(50, totalRows))
     }
   }, [totalRows])
 
