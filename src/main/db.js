@@ -4,7 +4,7 @@ let db
 
 export async function getDB() {
   if (!db) {
-    db = await mysql.createPool('mysql://dbadmin:StrongPassword%23123@localhost:3306/landlife')
+    db = await mysql.createPool('mysql://dbadmin:StrongPassword%23123@db.iamovi.com:3306/landlife')
   }
 
   return db
