@@ -61,5 +61,9 @@ contextBridge.exposeInMainWorld('api', {
   getDocumentTree: (rootDocumentId) => ipcRenderer.invoke('get-document-tree', rootDocumentId),
 
   exportDocuments: (filters) => ipcRenderer.invoke('export-documents', filters),
-  exportDocumentTree: (rootId) => ipcRenderer.invoke('export-document-tree', rootId)
+  exportDocumentTree: (rootId) => ipcRenderer.invoke('export-document-tree', rootId),
+
+  getConfig: () => ipcRenderer.invoke('config:get'),
+  saveConfig: (data) => ipcRenderer.invoke('config:set', data),
+  selectFolder: () => ipcRenderer.invoke('dialog:selectFolder')
 })

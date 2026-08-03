@@ -25,6 +25,7 @@ export default function Layout({ children }) {
   ]
 
   const settingsLinks = [
+    { to: '/config', icon: <MapPin size={18} />, label: 'App Config' },
     { to: '/locations', icon: <MapPin size={18} />, label: 'Manage Locations' },
     { to: '/export', icon: <DatabaseBackup size={18} />, label: 'Backup/Export' }
   ]
@@ -89,8 +90,7 @@ export default function Layout({ children }) {
                         ${isActive ? 'bg-emerald-700 text-white font-medium' : 'text-gray-700 hover:bg-gray-100'}
                       `}
                     >
-                      {link.icon}
-                      <span className="text-sm">{link.label}</span>
+                      <span className="text-sm">- {link.label}</span>
                     </Link>
                   )
                 })}

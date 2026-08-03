@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import ReportsPage from './pages/Reports'
 import ExportPage from './pages/Export'
 import UpdateDocument from './pages/UpdateDocument'
+import Config from './pages/Config'
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="/locations" element={<Locations />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/export" element={<ExportPage />} />
+          <Route path="/config" element={<Config />} />
         </Routes>
       </Layout>
     </Router>

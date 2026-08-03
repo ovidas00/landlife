@@ -13,6 +13,7 @@ import {
   exportToWord,
   getDocumentFolder
 } from './utils'
+import { getStore } from './store'
 
 function createWindow() {
   // Create the browser window.
@@ -288,7 +289,7 @@ ipcMain.handle('upload-document', async (event, payload) => {
     nextDocumentId
   } = payload
 
-  const baseDir = join(getDocumentFolder(), 'documents')
+  const baseDir = join(await getDocumentFolder(), 'documents')
   if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
 
   // isValidPosition
@@ -637,7 +638,7 @@ ipcMain.handle('update-document', async (event, payload) => {
 
   if (!id) throw new Error('Document ID is required')
 
-  const baseDir = join(getDocumentFolder(), 'documents')
+  const baseDir = join(await getDocumentFolder(), 'documents')
   if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
 
   // isValidPosition
@@ -772,7 +773,7 @@ ipcMain.handle('update-document', async (event, payload) => {
     const filesToDelete = allFiles.filter((f) => !keepIds.includes(f.id))
 
     for (const f of filesToDelete) {
-      const path = join(getDocumentFolder(), 'documents', basename(f.file_path))
+      const path = join(await getDocumentFolder(), 'documents', basename(f.file_path))
 
       try {
         if (fs.existsSync(path)) fs.unlinkSync(path)
@@ -830,7 +831,7 @@ ipcMain.handle('delete-document', async (event, documentId) => {
 
     // Delete files from disk
     for (const file of files) {
-      const path = join(getDocumentFolder(), 'documents', basename(file.file_path))
+      const path = join(await getDocumentFolder(), 'documents', basename(file.file_path))
 
       if (fs.existsSync(path)) {
         try {
@@ -862,7 +863,7 @@ ipcMain.handle('delete-document', async (event, documentId) => {
 /* Utils */
 ipcMain.handle('open-file', async (event, filePath) => {
   if (!filePath) return
-  const path = join(getDocumentFolder(), 'documents', basename(filePath))
+  const path = join(await getDocumentFolder(), 'documents', basename(filePath))
   await shell.openPath(path) // opens PDF in default system app
 })
 
@@ -978,7 +979,7 @@ ipcMain.handle('get-report-state', async (event, filters = {}) => {
 
 /* Backup */
 ipcMain.handle('start-backup', async (event, password = null) => {
-  const sourceDir = getDocumentFolder()
+  const sourceDir = await getDocumentFolder()
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
 
   const { canceled, filePath } = await dialog.showSaveDialog({
@@ -1001,7 +1002,7 @@ ipcMain.handle('start-backup', async (event, password = null) => {
 })
 
 ipcMain.handle('start-backup-regional', async (event, { password = null, upazilaId }) => {
-  const sourceDir = getDocumentFolder()
+  const sourceDir = await getDocumentFolder()
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
 
   const { canceled, filePath } = await dialog.showSaveDialog({
@@ -1412,4 +1413,32 @@ ipcMain.handle('export-document-tree', async (event, rootId) => {
     console.error('Export failed:', err)
     return { success: false, message: 'Failed to export document tree.' }
   }
+})
+
+/* Config */
+ipcMain.handle('config:get', async () => {
+  const store = await getStore()
+  return {
+    documentPath: store.get('documentPath')
+  }
+})
+
+ipcMain.handle('config:set', async (_, { documentPath }) => {
+  const store = await getStore()
+
+  if (documentPath !== undefined) {
+    store.set('documentPath', documentPath)
+  }
+
+  return {
+    documentPath: store.get('documentPath')
+  }
+})
+
+ipcMain.handle('dialog:selectFolder', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    properties: ['openDirectory']
+  })
+
+  return canceled ? null : filePaths[0]
 })

@@ -21,8 +21,22 @@ import {
   PageOrientation,
   TableLayoutType
 } from 'docx'
+import { getStore } from './store'
 
-export function getDocumentFolder() {
+export async function getDocumentFolder() {
+  const store = await getStore()
+  const customPath = store.get('documentPath')
+
+  if (customPath) {
+    try {
+      fs.mkdirSync(customPath, { recursive: true })
+      return customPath
+    } catch {
+      console.warn('Invalid custom path, falling back to default')
+    }
+  }
+
+  // Default
   let folder
 
   if (process.platform === 'win32') {

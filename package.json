@@ -24,6 +24,7 @@
     "7zip-bin": "^5.2.0",
     "better-sqlite3": "^12.6.2",
     "docx": "^9.6.1",
+    "electron-store": "^11.0.2",
     "exceljs": "^4.4.0",
     "lucide-react": "^0.563.0",
     "mysql2": "^3.23.1",
