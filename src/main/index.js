@@ -290,40 +290,18 @@ ipcMain.handle('upload-document', async (event, payload) => {
   } = payload
 
   const baseDir = join(await getDocumentFolder(), 'documents')
-  if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
 
-  // isValidPosition
-  async function isValidPosition(previousId, nextId) {
-    if (!previousId || !nextId) return true
-    if (previousId === nextId) return false
-
-    const [rows] = await db.execute('SELECT id, next_document_id FROM documents')
-
-    const nextMap = new Map(rows.map((r) => [r.id, r.next_document_id]))
-
-    const visited = new Set()
-    let currentId = previousId
-
-    while (currentId != null) {
-      if (visited.has(currentId)) return false
-      visited.add(currentId)
-
-      if (currentId === nextId) return true
-
-      currentId = nextMap.get(currentId)
-    }
-
-    return false
+  if (!fs.existsSync(baseDir)) {
+    fs.mkdirSync(baseDir, { recursive: true })
   }
 
-  // Validate sequence
-  if (previousDocumentId && nextDocumentId) {
-    const valid = await isValidPosition(previousDocumentId, nextDocumentId)
-    if (!valid) {
-      return {
-        success: false,
-        message: 'Invalid sequence: previous document must come before next document in the chain'
-      }
+  const previousId = previousDocumentId ? Number(previousDocumentId) : null
+  const nextId = nextDocumentId ? Number(nextDocumentId) : null
+
+  if (previousId && nextId && previousId === nextId) {
+    return {
+      success: false,
+      message: 'Previous and next document cannot be the same'
     }
   }
 
@@ -332,11 +310,46 @@ ipcMain.handle('upload-document', async (event, payload) => {
   try {
     await connection.beginTransaction()
 
-    // Insert document
+    let previousNextId = null
+    let nextPreviousId = null
+
+    if (previousId) {
+      const [rows] = await connection.execute(
+        `
+        SELECT next_document_id
+        FROM document_links
+        WHERE previous_document_id = ?
+        FOR UPDATE
+        `,
+        [previousId]
+      )
+
+      previousNextId = rows[0]?.next_document_id ?? null
+    }
+
+    if (nextId) {
+      const [rows] = await connection.execute(
+        `
+        SELECT previous_document_id
+        FROM document_links
+        WHERE next_document_id = ?
+        FOR UPDATE
+        `,
+        [nextId]
+      )
+
+      nextPreviousId = rows[0]?.previous_document_id ?? null
+    }
+
+    if (previousId && nextId) {
+      if (previousNextId !== nextId || nextPreviousId !== previousId) {
+        throw new Error('Invalid sequence: previous and next documents are not directly connected')
+      }
+    }
+
     const [result] = await connection.execute(
       `
-      INSERT INTO documents
-      (
+      INSERT INTO documents (
         upazila_id,
         mouza_id,
         volume_id,
@@ -345,46 +358,104 @@ ipcMain.handle('upload-document', async (event, payload) => {
         holding_no,
         doc_type,
         remarks,
-        previous_document_id,
-        next_document_id,
         created_at,
         updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
       `,
-      [
-        upazilaId,
-        mouzaId,
-        volumeId,
-        khatianNo,
-        dagNo,
-        holdingNo,
-        docType,
-        remarks,
-        previousDocumentId || null,
-        nextDocumentId || null
-      ]
+      [upazilaId, mouzaId, volumeId, khatianNo, dagNo, holdingNo, docType, remarks]
     )
 
     const documentId = result.insertId
 
-    // Update previous document
-    if (previousDocumentId) {
-      await connection.execute(`UPDATE documents SET next_document_id = ? WHERE id = ?`, [
-        documentId,
-        previousDocumentId
-      ])
+    if (previousId && nextId) {
+      await connection.execute(
+        `
+        DELETE FROM document_links
+        WHERE previous_document_id = ?
+          AND next_document_id = ?
+        `,
+        [previousId, nextId]
+      )
+
+      await connection.execute(
+        `
+        INSERT INTO document_links (
+          previous_document_id,
+          next_document_id
+        )
+        VALUES (?, ?), (?, ?)
+        `,
+        [previousId, documentId, documentId, nextId]
+      )
+    } else if (previousId) {
+      if (previousNextId) {
+        await connection.execute(
+          `
+          UPDATE document_links
+          SET next_document_id = ?
+          WHERE previous_document_id = ?
+          `,
+          [documentId, previousId]
+        )
+
+        await connection.execute(
+          `
+          INSERT INTO document_links (
+            previous_document_id,
+            next_document_id
+          )
+          VALUES (?, ?)
+          `,
+          [documentId, previousNextId]
+        )
+      } else {
+        await connection.execute(
+          `
+          INSERT INTO document_links (
+            previous_document_id,
+            next_document_id
+          )
+          VALUES (?, ?)
+          `,
+          [previousId, documentId]
+        )
+      }
+    } else if (nextId) {
+      if (nextPreviousId) {
+        await connection.execute(
+          `
+          UPDATE document_links
+          SET next_document_id = ?
+          WHERE previous_document_id = ?
+          `,
+          [documentId, nextPreviousId]
+        )
+
+        await connection.execute(
+          `
+          INSERT INTO document_links (
+            previous_document_id,
+            next_document_id
+          )
+          VALUES (?, ?)
+          `,
+          [documentId, nextId]
+        )
+      } else {
+        await connection.execute(
+          `
+          INSERT INTO document_links (
+            previous_document_id,
+            next_document_id
+          )
+          VALUES (?, ?)
+          `,
+          [documentId, nextId]
+        )
+      }
     }
 
-    //  Update next document
-    if (nextDocumentId) {
-      await connection.execute(`UPDATE documents SET previous_document_id = ? WHERE id = ?`, [
-        documentId,
-        nextDocumentId
-      ])
-    }
-
-    // Insert files
     for (const file of files || []) {
       const filename = `${Date.now()}-${file.name}`
       const filePath = join(baseDir, filename)
@@ -393,7 +464,11 @@ ipcMain.handle('upload-document', async (event, payload) => {
 
       await connection.execute(
         `
-        INSERT INTO document_files (document_id, file_name, file_path)
+        INSERT INTO document_files (
+          document_id,
+          file_name,
+          file_path
+        )
         VALUES (?, ?, ?)
         `,
         [documentId, file.name, filePath]
@@ -403,19 +478,27 @@ ipcMain.handle('upload-document', async (event, payload) => {
     await connection.commit()
     connection.release()
 
-    return { success: true, documentId }
+    return {
+      success: true,
+      documentId
+    }
   } catch (err) {
     await connection.rollback()
     connection.release()
 
     console.error('Error uploading document:', err)
-    return { success: false, message: 'Failed to upload document' }
+
+    return {
+      success: false,
+      message: err.message || 'Failed to upload document'
+    }
   }
 })
 
 ipcMain.handle('get-documents', async (event, filters = {}) => {
   try {
     const { upazilaId, mouzaId, volumeId, docType, searchQuery, page = 1, pageSize = 20 } = filters
+
     const offset = (page - 1) * pageSize
 
     const conditions = []
@@ -425,52 +508,78 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
       conditions.push('d.upazila_id = ?')
       params.push(upazilaId)
     }
+
     if (mouzaId) {
       conditions.push('d.mouza_id = ?')
       params.push(mouzaId)
     }
+
     if (volumeId) {
       conditions.push('d.volume_id = ?')
       params.push(volumeId)
     }
+
     if (docType) {
       conditions.push('d.doc_type = ?')
       params.push(docType)
     }
+
     if (searchQuery) {
       const q = `%${searchQuery}%`
-      conditions.push(`(
-  d.khatian_no LIKE ?
-  OR d.dag_no LIKE ?
-  OR d.holding_no LIKE ?
-)`)
+
+      conditions.push(`
+        (
+          d.khatian_no LIKE ?
+          OR d.dag_no LIKE ?
+          OR d.holding_no LIKE ?
+        )
+      `)
+
       params.push(q, q, q)
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
-    // Find only needed ids
+    // Get paginated document IDs
     const [idRows] = await db.query(
-      `SELECT d.id FROM documents d ${whereClause} ORDER BY d.id DESC LIMIT ? OFFSET ?`,
+      `
+      SELECT d.id
+      FROM documents d
+      ${whereClause}
+      ORDER BY d.id DESC
+      LIMIT ? OFFSET ?
+      `,
       [...params, pageSize, offset]
     )
-    const ids = idRows.map((r) => r.id)
 
-    // total count
+    const ids = idRows.map((row) => Number(row.id))
+
+    // Total count
     const [countRows] = await db.query(
-      `SELECT COUNT(*) as count FROM documents d ${whereClause}`,
+      `
+      SELECT COUNT(*) AS count
+      FROM documents d
+      ${whereClause}
+      `,
       params
     )
-    const total = countRows[0].count
+
+    const total = Number(countRows[0].count)
 
     if (ids.length === 0) {
-      return { data: [], total, page, pageSize }
+      return {
+        data: [],
+        total,
+        page,
+        pageSize
+      }
     }
 
-    const idPlaceholders = ids.map(() => '?').join(',')
+    const placeholders = ids.map(() => '?').join(',')
 
     // Documents
-    const documentsQuery = `
+    const [documents] = await db.query(
+      `
       SELECT
         d.*,
         u.name AS upazilaName,
@@ -480,49 +589,70 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
       LEFT JOIN upazilas u ON d.upazila_id = u.id
       LEFT JOIN mouzas m ON d.mouza_id = m.id
       LEFT JOIN volumes v ON d.volume_id = v.id
-      WHERE d.id IN (${idPlaceholders})
+      WHERE d.id IN (${placeholders})
       ORDER BY d.id DESC
-    `
-    const [documents] = await db.query(documentsQuery, ids)
+      `,
+      ids
+    )
 
-    // Relation counts
-    const relationQuery = `
-      WITH RECURSIVE down_chain (root_id, next_id, path) AS (
-        SELECT id AS root_id, next_document_id AS next_id, CAST(CONCAT('|', id, '|') AS CHAR(4000)) AS path
-        FROM documents
-        WHERE id IN (${idPlaceholders})
-          AND next_document_id IS NOT NULL
+    // Chain
+    let relationByDoc = {}
 
-        UNION ALL
+    if (ids.length > 0) {
+      const [relationRows] = await db.query(
+        `
+    WITH RECURSIVE downline AS (
+      SELECT 
+        previous_document_id AS root_id,
+        next_document_id,
+        1 AS depth
+      FROM document_links
+      WHERE previous_document_id IN (${placeholders})
 
-        SELECT dc.root_id, d.next_document_id, CONCAT(dc.path, d.id, '|')
-        FROM down_chain dc
-        JOIN documents d ON dc.next_id = d.id
-        WHERE d.next_document_id IS NOT NULL
-          AND LOCATE(CONCAT('|', d.id, '|'), dc.path) = 0
+      UNION ALL
+
+      SELECT 
+        d.root_id,
+        dl.next_document_id,
+        d.depth + 1
+      FROM downline d
+      JOIN document_links dl 
+        ON d.next_document_id = dl.previous_document_id
+      WHERE d.depth < 100
+    )
+    SELECT root_id, COUNT(*) AS relation_count
+    FROM downline
+    GROUP BY root_id
+    `,
+        ids
       )
-      SELECT root_id, COUNT(*) AS relation_count
-      FROM down_chain
-      GROUP BY root_id
-    `
-    const [relationRows] = await db.query(relationQuery, ids)
 
-    const relationByDoc = {}
-    for (const row of relationRows) {
-      relationByDoc[row.root_id] = row.relation_count
+      for (const row of relationRows) {
+        relationByDoc[row.root_id] = Number(row.relation_count)
+      }
     }
 
     // Files
     const [fileRows] = await db.query(
-      `SELECT id, document_id, file_name, file_path
-       FROM document_files
-       WHERE document_id IN (${idPlaceholders})`,
+      `
+      SELECT
+        id,
+        document_id,
+        file_name,
+        file_path
+      FROM document_files
+      WHERE document_id IN (${placeholders})
+      `,
       ids
     )
 
     const filesByDoc = {}
+
     for (const row of fileRows) {
-      if (!filesByDoc[row.document_id]) filesByDoc[row.document_id] = []
+      if (!filesByDoc[row.document_id]) {
+        filesByDoc[row.document_id] = []
+      }
+
       filesByDoc[row.document_id].push({
         id: row.id,
         file_name: row.file_name,
@@ -530,42 +660,72 @@ ipcMain.handle('get-documents', async (event, filters = {}) => {
       })
     }
 
-    // Merge everything
+    // Merge
     const result = documents.map((doc) => ({
       ...doc,
-      relation_count: relationByDoc[doc.id] || 0,
+      relation_count: relationByDoc[Number(doc.id)] || 0,
       files: filesByDoc[doc.id] || []
     }))
 
-    return { data: result, total, page, pageSize }
+    return {
+      data: result,
+      total,
+      page,
+      pageSize
+    }
   } catch (err) {
     console.error('get-documents failed:', err)
+
     throw new Error('Failed to load documents. Please try again.')
   }
 })
 
 ipcMain.handle('get-document-by-id', async (event, documentId) => {
-  if (!documentId) throw new Error('Document ID is required')
+  if (!documentId) {
+    throw new Error('Document ID is required')
+  }
 
   const [rows] = await db.execute(
     `
-    SELECT 
+    SELECT
       d.*,
       u.name AS upazilaName,
       m.name AS mouzaName,
       v.name AS volumeName,
-      COALESCE(f.files, '') AS files
+      COALESCE(f.files, '') AS files,
+
+      prev_link.previous_document_id,
+      next_link.next_document_id
+
     FROM documents d
-    LEFT JOIN upazilas u ON d.upazila_id = u.id
-    LEFT JOIN mouzas m ON d.mouza_id = m.id
-    LEFT JOIN volumes v ON d.volume_id = v.id
+
+    LEFT JOIN upazilas u
+      ON d.upazila_id = u.id
+
+    LEFT JOIN mouzas m
+      ON d.mouza_id = m.id
+
+    LEFT JOIN volumes v
+      ON d.volume_id = v.id
+
     LEFT JOIN (
-      SELECT 
+      SELECT
         document_id,
-        GROUP_CONCAT(CONCAT(id, '::', file_name, '::', file_path) SEPARATOR '|') AS files
+        GROUP_CONCAT(
+          CONCAT(id, '::', file_name, '::', file_path)
+          SEPARATOR '|'
+        ) AS files
       FROM document_files
       GROUP BY document_id
-    ) f ON f.document_id = d.id
+    ) f
+      ON f.document_id = d.id
+
+    LEFT JOIN document_links prev_link
+      ON prev_link.next_document_id = d.id
+
+    LEFT JOIN document_links next_link
+      ON next_link.previous_document_id = d.id
+
     WHERE d.id = ?
     `,
     [documentId]
@@ -573,41 +733,57 @@ ipcMain.handle('get-document-by-id', async (event, documentId) => {
 
   const doc = rows[0]
 
-  if (!doc) return null
+  if (!doc) {
+    return null
+  }
 
-  // Map files
   const files = doc.files
     ? doc.files.split('|').map((str) => {
         const [fileId, file_name, file_path] = str.split('::')
-        return { id: parseInt(fileId), file_name, file_path }
+
+        return {
+          id: parseInt(fileId),
+          file_name,
+          file_path
+        }
       })
     : []
 
-  // Fetch previous document
   let previousDocument = null
+
   if (doc.previous_document_id) {
     const [prevRows] = await db.execute(
       `
-      SELECT id, khatian_no, dag_no, holding_no
+      SELECT
+        id,
+        khatian_no,
+        dag_no,
+        holding_no
       FROM documents
       WHERE id = ?
       `,
       [doc.previous_document_id]
     )
+
     previousDocument = prevRows[0] || null
   }
 
-  // Fetch next document
   let nextDocument = null
+
   if (doc.next_document_id) {
     const [nextRows] = await db.execute(
       `
-      SELECT id, khatian_no, dag_no, holding_no
+      SELECT
+        id,
+        khatian_no,
+        dag_no,
+        holding_no
       FROM documents
       WHERE id = ?
       `,
       [doc.next_document_id]
     )
+
     nextDocument = nextRows[0] || null
   }
 
@@ -636,49 +812,31 @@ ipcMain.handle('update-document', async (event, payload) => {
     existingFiles = []
   } = payload
 
-  if (!id) throw new Error('Document ID is required')
-
-  const baseDir = join(await getDocumentFolder(), 'documents')
-  if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
-
-  // isValidPosition
-  async function isValidPosition(previousId, nextId) {
-    if (!previousId || !nextId) return true
-    if (previousId === nextId) return false
-
-    const [rows] = await db.execute('SELECT id, next_document_id FROM documents')
-
-    const nextMap = new Map(rows.map((r) => [r.id, r.next_document_id]))
-
-    const visited = new Set()
-    let currentId = previousId
-
-    while (currentId != null) {
-      if (visited.has(currentId)) return false
-      visited.add(currentId)
-
-      if (currentId === nextId) return true
-
-      currentId = nextMap.get(currentId)
-    }
-
-    return false
+  if (!id) {
+    throw new Error('Document ID is required')
   }
 
-  if (previousDocumentId === id || nextDocumentId === id) {
+  const baseDir = join(await getDocumentFolder(), 'documents')
+
+  if (!fs.existsSync(baseDir)) {
+    fs.mkdirSync(baseDir, { recursive: true })
+  }
+
+  const documentId = Number(id)
+  const previousId = previousDocumentId ? Number(previousDocumentId) : null
+  const nextId = nextDocumentId ? Number(nextDocumentId) : null
+
+  if (previousId === documentId || nextId === documentId) {
     return {
       success: false,
       message: 'Previous or next document cannot be the same as the current document'
     }
   }
 
-  if (previousDocumentId && nextDocumentId) {
-    const valid = await isValidPosition(previousDocumentId, nextDocumentId)
-    if (!valid) {
-      return {
-        success: false,
-        message: 'Invalid sequence: previous document must come before next document'
-      }
+  if (previousId && nextId && previousId === nextId) {
+    return {
+      success: false,
+      message: 'Previous and next document cannot be the same'
     }
   }
 
@@ -687,17 +845,189 @@ ipcMain.handle('update-document', async (event, payload) => {
   try {
     await connection.beginTransaction()
 
-    // Fetch old previous & next
-    const [oldRows] = await connection.execute(
-      'SELECT previous_document_id, next_document_id FROM documents WHERE id = ?',
-      [id]
+    // Get current links
+    const [currentLinks] = await connection.execute(
+      `
+      SELECT
+        previous_document_id,
+        next_document_id
+      FROM document_links
+      WHERE previous_document_id = ?
+         OR next_document_id = ?
+      FOR UPDATE
+      `,
+      [documentId, documentId]
     )
 
-    const oldDoc = oldRows[0]
-    const oldPrev = oldDoc?.previous_document_id
-    const oldNext = oldDoc?.next_document_id
+    let oldPrev = null
+    let oldNext = null
 
-    // Update main document
+    for (const link of currentLinks) {
+      if (Number(link.next_document_id) === documentId) {
+        oldPrev = Number(link.previous_document_id)
+      }
+
+      if (Number(link.previous_document_id) === documentId) {
+        oldNext = Number(link.next_document_id)
+      }
+    }
+
+    // Remove current document from the chain
+    await connection.execute(
+      `
+      DELETE FROM document_links
+      WHERE previous_document_id = ?
+         OR next_document_id = ?
+      `,
+      [documentId, documentId]
+    )
+
+    // Reconnect old neighbors
+    if (oldPrev && oldNext) {
+      await connection.execute(
+        `
+        INSERT INTO document_links (
+          previous_document_id,
+          next_document_id
+        )
+        VALUES (?, ?)
+        `,
+        [oldPrev, oldNext]
+      )
+    }
+
+    // Get current neighbors at the requested position
+    let previousNextId = null
+    let nextPreviousId = null
+
+    if (previousId) {
+      const [rows] = await connection.execute(
+        `
+        SELECT next_document_id
+        FROM document_links
+        WHERE previous_document_id = ?
+        FOR UPDATE
+        `,
+        [previousId]
+      )
+
+      previousNextId = rows[0]?.next_document_id ?? null
+    }
+
+    if (nextId) {
+      const [rows] = await connection.execute(
+        `
+        SELECT previous_document_id
+        FROM document_links
+        WHERE next_document_id = ?
+        FOR UPDATE
+        `,
+        [nextId]
+      )
+
+      nextPreviousId = rows[0]?.previous_document_id ?? null
+    }
+
+    // Both supplied: previous -> current -> next
+    if (previousId && nextId) {
+      if (Number(previousNextId) !== nextId || Number(nextPreviousId) !== previousId) {
+        throw new Error('Invalid sequence: previous and next documents are not directly connected')
+      }
+
+      await connection.execute(
+        `
+        DELETE FROM document_links
+        WHERE previous_document_id = ?
+          AND next_document_id = ?
+        `,
+        [previousId, nextId]
+      )
+
+      await connection.execute(
+        `
+        INSERT INTO document_links (
+          previous_document_id,
+          next_document_id
+        )
+        VALUES (?, ?), (?, ?)
+        `,
+        [previousId, documentId, documentId, nextId]
+      )
+    }
+
+    // Only previous supplied
+    else if (previousId) {
+      if (previousNextId) {
+        await connection.execute(
+          `
+          UPDATE document_links
+          SET next_document_id = ?
+          WHERE previous_document_id = ?
+          `,
+          [documentId, previousId]
+        )
+
+        await connection.execute(
+          `
+          INSERT INTO document_links (
+            previous_document_id,
+            next_document_id
+          )
+          VALUES (?, ?)
+          `,
+          [documentId, previousNextId]
+        )
+      } else {
+        await connection.execute(
+          `
+          INSERT INTO document_links (
+            previous_document_id,
+            next_document_id
+          )
+          VALUES (?, ?)
+          `,
+          [previousId, documentId]
+        )
+      }
+    }
+
+    // Only next supplied
+    else if (nextId) {
+      if (nextPreviousId) {
+        await connection.execute(
+          `
+          UPDATE document_links
+          SET next_document_id = ?
+          WHERE previous_document_id = ?
+          `,
+          [documentId, nextPreviousId]
+        )
+
+        await connection.execute(
+          `
+          INSERT INTO document_links (
+            previous_document_id,
+            next_document_id
+          )
+          VALUES (?, ?)
+          `,
+          [documentId, nextId]
+        )
+      } else {
+        await connection.execute(
+          `
+          INSERT INTO document_links (
+            previous_document_id,
+            next_document_id
+          )
+          VALUES (?, ?)
+          `,
+          [documentId, nextId]
+        )
+      }
+    }
+
+    // Update document
     await connection.execute(
       `
       UPDATE documents SET
@@ -709,79 +1039,44 @@ ipcMain.handle('update-document', async (event, payload) => {
         holding_no = ?,
         doc_type = ?,
         remarks = ?,
-        previous_document_id = ?,
-        next_document_id = ?,
         updated_at = NOW()
       WHERE id = ?
       `,
-      [
-        upazilaId,
-        mouzaId,
-        volumeId,
-        khatianNo,
-        dagNo,
-        holdingNo,
-        docType,
-        remarks,
-        previousDocumentId || null,
-        nextDocumentId || null,
-        id
-      ]
+      [upazilaId, mouzaId, volumeId, khatianNo, dagNo, holdingNo, docType, remarks, documentId]
     )
 
-    // Fix old neighbors
-    if (oldPrev && oldPrev !== previousDocumentId) {
-      await connection.execute(`UPDATE documents SET next_document_id = ? WHERE id = ?`, [
-        oldNext || null,
-        oldPrev
-      ])
-    }
+    // Handle existing files
+    const keepIds = existingFiles.map((file) => Number(file.id))
 
-    if (oldNext && oldNext !== nextDocumentId) {
-      await connection.execute(`UPDATE documents SET previous_document_id = ? WHERE id = ?`, [
-        oldPrev || null,
-        oldNext
-      ])
-    }
-
-    // Update new neighbors
-    if (previousDocumentId) {
-      await connection.execute(`UPDATE documents SET next_document_id = ? WHERE id = ?`, [
-        id,
-        previousDocumentId
-      ])
-    }
-
-    if (nextDocumentId) {
-      await connection.execute(`UPDATE documents SET previous_document_id = ? WHERE id = ?`, [
-        id,
-        nextDocumentId
-      ])
-    }
-
-    // Handle files
-
-    // Existing file IDs to keep
-    const keepIds = existingFiles.map((f) => f.id)
-
-    // Get all files
     const [allFiles] = await connection.execute(
-      `SELECT * FROM document_files WHERE document_id = ?`,
-      [id]
+      `
+      SELECT *
+      FROM document_files
+      WHERE document_id = ?
+      `,
+      [documentId]
     )
 
-    const filesToDelete = allFiles.filter((f) => !keepIds.includes(f.id))
+    const filesToDelete = allFiles.filter((file) => !keepIds.includes(Number(file.id)))
 
-    for (const f of filesToDelete) {
-      const path = join(await getDocumentFolder(), 'documents', basename(f.file_path))
+    for (const file of filesToDelete) {
+      const filePath = join(baseDir, basename(file.file_path))
 
       try {
-        if (fs.existsSync(path)) fs.unlinkSync(path)
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath)
+        }
       } catch {
-        // ignore
+        // Ignore file deletion errors
       }
 
-      await connection.execute(`DELETE FROM document_files WHERE id = ?`, [f.id])
+      await connection.execute(
+        `
+        DELETE FROM document_files
+        WHERE id = ?
+        `,
+        [file.id]
+      )
     }
 
     // Insert new files
@@ -793,29 +1088,43 @@ ipcMain.handle('update-document', async (event, payload) => {
 
       await connection.execute(
         `
-        INSERT INTO document_files (document_id, file_name, file_path)
+        INSERT INTO document_files (
+          document_id,
+          file_name,
+          file_path
+        )
         VALUES (?, ?, ?)
         `,
-        [id, file.name, filePath]
+        [documentId, file.name, filePath]
       )
     }
 
     await connection.commit()
     connection.release()
 
-    return { success: true, documentId: id }
+    return {
+      success: true,
+      documentId
+    }
   } catch (err) {
     await connection.rollback()
     connection.release()
 
     console.error('Error updating document:', err)
-    return { success: false, message: 'Failed to update document' }
+
+    return {
+      success: false,
+      message: err.message || 'Failed to update document'
+    }
   }
 })
 
 ipcMain.handle('delete-document', async (event, documentId) => {
   if (!documentId) {
-    return { success: false, message: 'Document ID is required' }
+    return {
+      success: false,
+      message: 'Document ID is required'
+    }
   }
 
   const connection = await db.getConnection()
@@ -823,26 +1132,75 @@ ipcMain.handle('delete-document', async (event, documentId) => {
   try {
     await connection.beginTransaction()
 
-    // Get files
+    const [links] = await connection.execute(
+      `
+      SELECT
+        previous_document_id,
+        next_document_id
+      FROM document_links
+      WHERE previous_document_id = ?
+         OR next_document_id = ?
+      FOR UPDATE
+      `,
+      [documentId, documentId]
+    )
+
+    let previousId = null
+    let nextId = null
+
+    for (const link of links) {
+      if (Number(link.next_document_id) === Number(documentId)) {
+        previousId = Number(link.previous_document_id)
+      }
+
+      if (Number(link.previous_document_id) === Number(documentId)) {
+        nextId = Number(link.next_document_id)
+      }
+    }
+
+    await connection.execute(
+      `
+      DELETE FROM document_links
+      WHERE previous_document_id = ?
+         OR next_document_id = ?
+      `,
+      [documentId, documentId]
+    )
+
+    if (previousId && nextId) {
+      await connection.execute(
+        `
+        INSERT INTO document_links (
+          previous_document_id,
+          next_document_id
+        )
+        VALUES (?, ?)
+        `,
+        [previousId, nextId]
+      )
+    }
+
     const [files] = await connection.execute(
-      `SELECT file_path FROM document_files WHERE document_id = ?`,
+      `
+      SELECT file_path
+      FROM document_files
+      WHERE document_id = ?
+      `,
       [documentId]
     )
 
-    // Delete files from disk
     for (const file of files) {
-      const path = join(await getDocumentFolder(), 'documents', basename(file.file_path))
+      const filePath = join(await getDocumentFolder(), 'documents', basename(file.file_path))
 
-      if (fs.existsSync(path)) {
+      if (fs.existsSync(filePath)) {
         try {
-          fs.unlinkSync(path)
+          fs.unlinkSync(filePath)
         } catch (err) {
-          console.error(`Failed to delete file ${path}:`, err)
+          console.error(`Failed to delete file ${filePath}:`, err)
         }
       }
     }
 
-    // Delete DB records
     await connection.execute(`DELETE FROM document_files WHERE document_id = ?`, [documentId])
 
     await connection.execute(`DELETE FROM documents WHERE id = ?`, [documentId])
@@ -850,13 +1208,19 @@ ipcMain.handle('delete-document', async (event, documentId) => {
     await connection.commit()
     connection.release()
 
-    return { success: true }
+    return {
+      success: true
+    }
   } catch (err) {
     await connection.rollback()
     connection.release()
 
     console.error('Error deleting document:', err)
-    return { success: false, message: 'Failed to delete document' }
+
+    return {
+      success: false,
+      message: err.message || 'Failed to delete document'
+    }
   }
 })
 
@@ -1119,54 +1483,76 @@ ipcMain.handle('find-document', async (event, payload) => {
 })
 
 ipcMain.handle('get-document-tree', async (event, rootId) => {
-  if (!rootId) throw new Error('Document ID is required')
+  if (!rootId) {
+    throw new Error('Document ID is required')
+  }
 
   try {
-    const [chain] = await db.execute(
+    const [chainRows] = await db.execute(
       `
-      WITH RECURSIVE document_tree AS (
-        SELECT 
-          id,
-          khatian_no,
-          holding_no,
-          dag_no,
-          volume_id,
-          next_document_id,
-          0 AS depth
-        FROM documents
-        WHERE id = ?
+  WITH RECURSIVE chain AS (
+    SELECT 
+      d.id,
+      d.id AS root_id,
+      0 AS depth
+    FROM documents d
+    WHERE d.id = ?
 
-        UNION ALL
+    UNION ALL
 
-        SELECT 
-          d.id,
-          d.khatian_no,
-          d.holding_no,
-          d.dag_no,
-          d.volume_id,
-          d.next_document_id,
-          dt.depth + 1
-        FROM document_tree dt
-        JOIN documents d 
-          ON dt.next_document_id = d.id
-        WHERE dt.depth < 100
-      )
-
-      SELECT 
-        dt.id,
-        dt.khatian_no,
-        dt.holding_no,
-        dt.dag_no,
-        v.name AS volumeName
-      FROM document_tree dt
-      LEFT JOIN volumes v ON dt.volume_id = v.id
-      `,
+    SELECT 
+      dl.next_document_id AS id,
+      c.root_id,
+      c.depth + 1
+    FROM chain c
+    JOIN document_links dl 
+      ON c.id = dl.previous_document_id
+    WHERE c.depth < 100
+  )
+  SELECT id, depth
+  FROM chain
+  ORDER BY depth ASC
+  `,
       [rootId]
     )
 
-    return chain
+    const chainIds = chainRows.map((row) => Number(row.id))
+
+    if (chainIds.length === 0) {
+      return []
+    }
+
+    const placeholders = chainIds.map(() => '?').join(',')
+
+    const [rows] = await db.execute(
+      `
+      SELECT
+        d.id,
+        d.khatian_no,
+        d.holding_no,
+        d.dag_no,
+        d.volume_id,
+        v.name AS volumeName
+      FROM documents d
+      LEFT JOIN volumes v
+        ON d.volume_id = v.id
+      WHERE d.id IN (${placeholders})
+      `,
+      chainIds
+    )
+
+    const documentMap = new Map(rows.map((row) => [Number(row.id), row]))
+
+    return chainIds
+      .map((id) => documentMap.get(id))
+      .filter(Boolean)
+      .map((doc, index) => ({
+        ...doc,
+        depth: index
+      }))
   } catch (err) {
     console.error('get-document-tree failed:', err)
+
     throw new Error('Failed to load document chain. Please try again.')
   }
 })
@@ -1315,69 +1701,101 @@ ipcMain.handle('export-documents', async (event, filters) => {
 })
 
 ipcMain.handle('export-document-tree', async (event, rootId) => {
-  if (!rootId) throw new Error('Document ID is required')
+  if (!rootId) {
+    throw new Error('Document ID is required')
+  }
 
   try {
-    const [documents] = await db.execute(
+    const [chainRows] = await db.execute(
       `
-      WITH RECURSIVE document_tree AS (
-        SELECT
-          d.id,
-          d.upazila_id,
-          d.mouza_id,
-          d.volume_id,
-          d.khatian_no,
-          d.holding_no,
-          d.dag_no,
-          d.doc_type,
-          d.remarks,
-          d.created_at,
-          d.updated_at,
-          d.next_document_id,
-          0 AS depth
-        FROM documents d
-        WHERE d.id = ?
+  WITH RECURSIVE chain AS (
+    SELECT 
+      d.id,
+      0 AS depth
+    FROM documents d
+    WHERE d.id = ?
 
-        UNION ALL
+    UNION ALL
 
-        SELECT
-          d.id,
-          d.upazila_id,
-          d.mouza_id,
-          d.volume_id,
-          d.khatian_no,
-          d.holding_no,
-          d.dag_no,
-          d.doc_type,
-          d.remarks,
-          d.created_at,
-          d.updated_at,
-          d.next_document_id,
-          dt.depth + 1
-        FROM document_tree dt
-        JOIN documents d ON dt.next_document_id = d.id
-        WHERE dt.depth < 100
-      )
-
-      SELECT
-        dt.*,
-        u.name AS upazilaName,
-        m.name AS mouzaName,
-        v.name AS volumeName
-      FROM document_tree dt
-      LEFT JOIN upazilas u ON dt.upazila_id = u.id
-      LEFT JOIN mouzas m ON dt.mouza_id = m.id
-      LEFT JOIN volumes v ON dt.volume_id = v.id
-      ORDER BY dt.depth
-      `,
+    SELECT 
+      dl.next_document_id AS id,
+      c.depth + 1
+    FROM chain c
+    JOIN document_links dl 
+      ON c.id = dl.previous_document_id
+    WHERE c.depth < 100
+  )
+  SELECT id, depth
+  FROM chain
+  ORDER BY depth ASC
+  `,
       [rootId]
     )
 
+    const chainIds = chainRows.map((row) => Number(row.id))
+
+    if (!chainIds.length) {
+      return {
+        success: false,
+        message: 'No related documents found.'
+      }
+    }
+
+    const placeholders = chainIds.map(() => '?').join(',')
+
+    const [rows] = await db.execute(
+      `
+      SELECT
+        d.id,
+        d.upazila_id,
+        d.mouza_id,
+        d.volume_id,
+        d.khatian_no,
+        d.holding_no,
+        d.dag_no,
+        d.doc_type,
+        d.remarks,
+        d.created_at,
+        d.updated_at,
+        u.name AS upazilaName,
+        m.name AS mouzaName,
+        v.name AS volumeName
+      FROM documents d
+      LEFT JOIN upazilas u
+        ON d.upazila_id = u.id
+      LEFT JOIN mouzas m
+        ON d.mouza_id = m.id
+      LEFT JOIN volumes v
+        ON d.volume_id = v.id
+      WHERE d.id IN (${placeholders})
+      `,
+      chainIds
+    )
+
+    const documentMap = new Map(rows.map((row) => [Number(row.id), row]))
+
+    const documents = chainRows
+      .map((row) => {
+        const document = documentMap.get(Number(row.id))
+
+        if (!document) return null
+
+        return {
+          ...document,
+          depth: row.depth
+        }
+      })
+      .filter(Boolean)
+
     if (!documents.length) {
-      return { success: false, message: 'No related documents found.' }
+      return {
+        success: false,
+        message: 'No related documents found.'
+      }
     }
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+
     const defaultName = `document-tree-${rootId}-${timestamp}.pdf`
 
     const { canceled, filePath } = await dialog.showSaveDialog({
@@ -1385,9 +1803,10 @@ ipcMain.handle('export-document-tree', async (event, rootId) => {
       defaultPath: join(app.getPath('downloads'), defaultName)
     })
 
-    if (canceled || !filePath) return { success: false }
+    if (canceled || !filePath) {
+      return { success: false }
+    }
 
-    // Format for pdf
     const tableData = [
       ['#', 'Upazila', 'Mouza', 'Volume', 'Khatian', 'Holding', 'Plot', 'Type'],
       ...documents.map((d) => [
@@ -1411,7 +1830,11 @@ ipcMain.handle('export-document-tree', async (event, rootId) => {
     return { success }
   } catch (err) {
     console.error('Export failed:', err)
-    return { success: false, message: 'Failed to export document tree.' }
+
+    return {
+      success: false,
+      message: 'Failed to export document tree.'
+    }
   }
 })
 
