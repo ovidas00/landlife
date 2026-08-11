@@ -110,7 +110,7 @@ export default function SettingsPage() {
                   value={newPath}
                   readOnly
                   placeholder="Select folder..."
-                  className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm bg-gray-50"
+                  className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-600"
                 />
 
                 <button
@@ -152,7 +152,7 @@ export default function SettingsPage() {
                 onChange={(e) => setNewDatabaseUrl(e.target.value)}
                 placeholder="mysql://username:password@localhost:3306/database"
                 disabled={loading}
-                className="mt-2 w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono bg-white disabled:bg-gray-50"
+                className="mt-2 w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono bg-white disabled:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-600"
               />
 
               <p className="mt-2 text-xs text-gray-500">
