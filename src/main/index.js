@@ -204,34 +204,61 @@ ipcMain.handle('delete-mouza', async (event, mouzaId) => {
 })
 
 /* Volume */
-ipcMain.handle('add-volume', async (event, name, upazilaId) => {
+ipcMain.handle('add-volume', async (event, name, upazilaId, mouzaId) => {
   const normalizedName = name.trim()
 
   if (!normalizedName) {
     return { success: false, message: 'Name is required' }
   }
 
+  if (!upazilaId) {
+    return { success: false, message: 'Upazila is required' }
+  }
+
+  if (!mouzaId) {
+    return { success: false, message: 'Mouza is required' }
+  }
+
   try {
     await db.query(
       `
-      INSERT INTO volumes (name, upazila_id)
-      VALUES (?, ?)
+      INSERT INTO volumes (
+        name,
+        upazila_id,
+        mouza_id
+      )
+      VALUES (?, ?, ?)
       `,
-      [normalizedName, upazilaId]
+      [normalizedName, upazilaId, mouzaId]
     )
 
     return { success: true }
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {
-      return { success: false, message: 'Volume already exists in this upazila' }
+      return {
+        success: false,
+        message: 'Volume already exists for this upazila and mouza'
+      }
     }
 
-    return { success: false, message: `Something went wrong: ${err.message}` }
+    return {
+      success: false,
+      message: `Something went wrong: ${err.message}`
+    }
   }
 })
 
-ipcMain.handle('get-volumes', async (event, upazilaId) => {
-  const [rows] = await db.query('SELECT * FROM volumes WHERE upazila_id = ?', [upazilaId])
+ipcMain.handle('get-volumes', async (event, upazilaId, mouzaId) => {
+  const [rows] = await db.query(
+    `
+    SELECT *
+    FROM volumes
+    WHERE upazila_id = ?
+      AND mouza_id = ?
+    ORDER BY id
+    `,
+    [upazilaId, mouzaId]
+  )
 
   return rows
 })

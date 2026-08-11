@@ -11,8 +11,9 @@ contextBridge.exposeInMainWorld('api', {
   updateMouza: (payload) => ipcRenderer.invoke('update-mouza', payload),
   deleteMouza: (mouzaId) => ipcRenderer.invoke('delete-mouza', mouzaId),
 
-  addVolume: (name, upazilaId) => ipcRenderer.invoke('add-volume', name, upazilaId),
-  getVolumes: (upazilaId) => ipcRenderer.invoke('get-volumes', upazilaId),
+  addVolume: (name, upazilaId, mouzaId) =>
+    ipcRenderer.invoke('add-volume', name, upazilaId, mouzaId),
+  getVolumes: (upazilaId, mouzaId) => ipcRenderer.invoke('get-volumes', upazilaId, mouzaId),
   updateVolume: (payload) => ipcRenderer.invoke('update-volume', payload),
   deleteVolume: (volumeId) => ipcRenderer.invoke('delete-volume', volumeId),
 

@@ -15,6 +15,7 @@ export default function UpdateDocument() {
   const [volumes, setVolumes] = useState([])
 
   const [selectedUpazila, setSelectedUpazila] = useState('')
+  const [selectedMouza, setSelectedMouza] = useState('')
   const [mouza, setMouza] = useState('')
   const [volume, setVolume] = useState('')
   const [khatianNo, setKhatianNo] = useState('')
@@ -44,8 +45,8 @@ export default function UpdateDocument() {
     setMouzas(data)
   }
 
-  const loadVolumes = async (upazilaId) => {
-    const data = await window.api.getVolumes(upazilaId)
+  const loadVolumes = async (upazilaId, mouzaId) => {
+    const data = await window.api.getVolumes(upazilaId, mouzaId)
     setVolumes(data)
   }
 
@@ -54,6 +55,7 @@ export default function UpdateDocument() {
     const doc = await window.api.getDocumentById(documentId)
 
     setSelectedUpazila(doc.upazila_id)
+    setSelectedMouza(doc.mouza_id)
     setMouza(doc.mouza_id)
     setVolume(doc.volume_id)
     setKhatianNo(doc.khatian_no || '')
@@ -77,12 +79,21 @@ export default function UpdateDocument() {
     Promise.resolve().then(() => {
       if (selectedUpazila) {
         loadMouzas(selectedUpazila)
-        loadVolumes(selectedUpazila)
-        setMouza((prev) => prev) // keep selection if possible
-        setVolume((prev) => prev)
+      } else {
+        setMouzas([])
       }
     })
   }, [selectedUpazila])
+
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      if (selectedUpazila && selectedMouza) {
+        loadVolumes(selectedUpazila, selectedMouza)
+      } else {
+        setVolumes([])
+      }
+    })
+  }, [selectedUpazila, selectedMouza])
 
   const handleFiles = (fileList) => {
     if (isNotFound) return
@@ -269,7 +280,10 @@ export default function UpdateDocument() {
                     <label className="block mb-2 font-medium">Mouza *</label>
                     <select
                       value={mouza}
-                      onChange={(e) => setMouza(e.target.value)}
+                      onChange={(e) => {
+                        setMouza(e.target.value)
+                        setSelectedMouza(e.target.value)
+                      }}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     >
                       <option value="">Select Mouza</option>

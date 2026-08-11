@@ -8,6 +8,7 @@ export default function UploadDocument() {
   const [mouzas, setMouzas] = useState([])
   const [volumes, setVolumes] = useState([])
   const [selectedUpazila, setSelectedUpazila] = useState('')
+  const [selectedMouza, setSelectedMouza] = useState('')
   const [mouza, setMouza] = useState('')
   const [volume, setVolume] = useState('')
   const [khatianNo, setKhatianNo] = useState('')
@@ -35,8 +36,8 @@ export default function UploadDocument() {
     setMouzas(data)
   }
 
-  const loadVolumes = async (upazilaId) => {
-    const data = await window.api.getVolumes(upazilaId)
+  const loadVolumes = async (upazilaId, mouzaId) => {
+    const data = await window.api.getVolumes(upazilaId, mouzaId)
     setVolumes(data)
   }
 
@@ -50,12 +51,27 @@ export default function UploadDocument() {
     Promise.resolve().then(() => {
       if (selectedUpazila) {
         loadMouzas(selectedUpazila)
-        loadVolumes(selectedUpazila)
+        setMouza('')
+        setVolume('')
+      } else {
+        setMouzas([])
+        setVolumes([])
         setMouza('')
         setVolume('')
       }
     })
   }, [selectedUpazila])
+
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      if (selectedUpazila && selectedMouza) {
+        loadVolumes(selectedUpazila, selectedMouza)
+      } else {
+        setVolumes([])
+        setVolume('')
+      }
+    })
+  }, [selectedUpazila, selectedMouza])
 
   const handleFiles = (fileList) => {
     if (isNotFound) return
@@ -212,7 +228,10 @@ export default function UploadDocument() {
                     <label className="block mb-2 font-medium">Mouza *</label>
                     <select
                       value={mouza}
-                      onChange={(e) => setMouza(e.target.value)}
+                      onChange={(e) => {
+                        setMouza(e.target.value)
+                        setSelectedMouza(e.target.value)
+                      }}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     >
                       <option value="">Select Mouza</option>

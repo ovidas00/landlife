@@ -1,4 +1,4 @@
-import { MapPin, List, Check, Archive, Edit } from 'lucide-react'
+import { MapPin, List, Archive, Edit } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import ConfirmModal from '../components/ConfirmModal'
 import { showError, showSuccess } from '../utils/toast'
@@ -9,6 +9,7 @@ export default function Locations() {
   const [mouzaName, setMouzaName] = useState('')
   const [selectedUpazila, setSelectedUpazila] = useState(null)
   const [selectedUpazilaVolume, setSelectedUpazilaVolume] = useState(null)
+  const [selectedMouzaVolume, setSelectedMouzaVolume] = useState(null)
   const [upazilas, setUpazilas] = useState([])
   const [mouzas, setMouzas] = useState([])
   const [volumeName, setVolumeName] = useState('')
@@ -38,8 +39,8 @@ export default function Locations() {
     setMouzas(data)
   }
 
-  const loadVolumes = async (upazilaId) => {
-    const data = await window.api.getVolumes(upazilaId)
+  const loadVolumes = async (upazilaId, mouzaId) => {
+    const data = await window.api.getVolumes(upazilaId, mouzaId)
     setVolumes(data)
   }
 
@@ -59,11 +60,11 @@ export default function Locations() {
 
   useEffect(() => {
     Promise.resolve().then(() => {
-      if (selectedUpazilaVolume) {
-        loadVolumes(selectedUpazilaVolume)
+      if (selectedUpazilaVolume && selectedMouzaVolume) {
+        loadVolumes(selectedUpazilaVolume, selectedMouzaVolume)
       }
     })
-  }, [selectedUpazilaVolume])
+  }, [selectedUpazilaVolume, selectedMouzaVolume])
 
   return (
     <>
@@ -121,7 +122,7 @@ export default function Locations() {
             const result = await window.api.deleteVolume(selectedVolumeId)
 
             if (result?.success) {
-              loadVolumes(selectedUpazilaVolume)
+              loadVolumes(selectedUpazilaVolume, selectedMouzaVolume)
               showSuccess(result?.message || 'Volume deleted')
             } else {
               showError(result?.message || 'Failed to delete volume')
@@ -207,7 +208,7 @@ export default function Locations() {
             })
 
             if (result?.success) {
-              loadVolumes(selectedUpazilaVolume)
+              loadVolumes(selectedUpazilaVolume, selectedMouzaVolume)
               showSuccess(result?.message || 'Volume updated')
             } else {
               showError(result?.message || 'Failed to update volume')
@@ -449,6 +450,27 @@ export default function Locations() {
                   </select>
                 </div>
 
+                {/* Select Mouza */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Mouza
+                  </label>
+
+                  <select
+                    value={selectedMouzaVolume || ''}
+                    onChange={(e) => setSelectedMouzaVolume(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  >
+                    <option value="">Select Mouza</option>
+
+                    {mouzas.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Volume Name Input */}
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -465,16 +487,17 @@ export default function Locations() {
                     <button
                       className="px-6 py-2 bg-emerald-700 text-white font-medium rounded hover:bg-emerald-800 transition-colors"
                       onClick={async () => {
-                        if (volumeName && selectedUpazilaVolume) {
+                        if (volumeName && selectedUpazilaVolume && selectedMouzaVolume) {
                           try {
                             const result = await window.api.addVolume(
                               volumeName,
-                              selectedUpazilaVolume
+                              selectedUpazilaVolume,
+                              selectedMouzaVolume
                             )
 
                             if (result?.success) {
                               setVolumeName('')
-                              loadVolumes(selectedUpazilaVolume)
+                              loadVolumes(selectedUpazilaVolume, selectedMouzaVolume)
                               showSuccess('Volume added')
                             } else {
                               showError(result?.message || 'Failed to add volume')

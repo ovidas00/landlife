@@ -48,22 +48,37 @@ export default function RecordsSearch() {
         setMouzas([])
         setVolumes([])
         setSelectedMouza('')
+        setSelectedVolume('')
         return
       }
 
-      const [mouzaData, volumeData] = await Promise.all([
-        window.api.getMouzas(selectedUpazila),
-        window.api.getVolumes(selectedUpazila)
-      ])
+      const mouzaData = await window.api.getMouzas(selectedUpazila)
 
       setMouzas(mouzaData)
-      setVolumes(volumeData)
+      setVolumes([])
       setSelectedMouza('')
       setSelectedVolume('')
     }
 
     loadData()
   }, [selectedUpazila])
+
+  useEffect(() => {
+    const loadVolumes = async () => {
+      if (!selectedUpazila || !selectedMouza) {
+        setVolumes([])
+        setSelectedVolume('')
+        return
+      }
+
+      const volumeData = await window.api.getVolumes(selectedUpazila, selectedMouza)
+
+      setVolumes(volumeData)
+      setSelectedVolume('')
+    }
+
+    loadVolumes()
+  }, [selectedUpazila, selectedMouza])
 
   // Immediate fetch on mount or filter/page change
   useEffect(() => {
