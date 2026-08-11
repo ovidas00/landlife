@@ -85,6 +85,7 @@ export default function Dashboard() {
             label: 'Total Records',
             value: total,
             subtitle: 'Registered records',
+            percent: '100',
             icon: FileText,
             bgColor: 'bg-blue-50',
             iconColor: 'text-blue-700',
