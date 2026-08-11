@@ -1839,26 +1839,33 @@ ipcMain.handle('export-document-tree', async (event, rootId) => {
 })
 
 /* Config */
-ipcMain.handle('config:get', async () => {
+ipcMain.handle('get-config', async () => {
   const store = await getStore()
+
   return {
-    documentPath: store.get('documentPath')
+    documentPath: store.get('documentPath'),
+    databaseUrl: store.get('databaseUrl')
   }
 })
 
-ipcMain.handle('config:set', async (_, { documentPath }) => {
+ipcMain.handle('save-config', async (_, { documentPath, databaseUrl }) => {
   const store = await getStore()
 
   if (documentPath !== undefined) {
     store.set('documentPath', documentPath)
   }
 
+  if (databaseUrl !== undefined) {
+    store.set('databaseUrl', databaseUrl)
+  }
+
   return {
-    documentPath: store.get('documentPath')
+    documentPath: store.get('documentPath'),
+    databaseUrl: store.get('databaseUrl')
   }
 })
 
-ipcMain.handle('dialog:selectFolder', async () => {
+ipcMain.handle('dialog-select-folder', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog({
     properties: ['openDirectory']
   })
