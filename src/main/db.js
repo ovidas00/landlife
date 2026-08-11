@@ -3,7 +3,7 @@ import { getStore } from './store'
 
 let db
 
-const DEFAULT_DATABASE_URL = 'mysql://landlife_user:LandlifeDB%23123@db.iamovi.com/landlife'
+const DEFAULT_DATABASE_URL = 'mysql://landlife_user:LandlifeDB%23123@db.iamovi.com/landdb'
 
 export async function getDB() {
   if (!db) {
