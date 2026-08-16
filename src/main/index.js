@@ -1255,7 +1255,7 @@ ipcMain.handle('delete-document', async (event, documentId) => {
 ipcMain.handle('open-file', async (event, filePath) => {
   if (!filePath) return
   const path = join(await getDocumentFolder(), 'documents', basename(filePath))
-  await shell.openPath(path) // opens PDF in default system app
+  await shell.openPath(path.normalize('NFC')) // opens PDF in default system app
 })
 
 /* Stats */
