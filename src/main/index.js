@@ -1252,17 +1252,17 @@ ipcMain.handle('delete-document', async (event, documentId) => {
 })
 
 /* Utils */
-ipcMain.handle('open-file', async (event, filePath) => {
+ipcMain.handle('open-file', async (_event, filePath) => {
   if (!filePath) return
 
-  const filename = basename(decodeURIComponent(filePath))
+  const filename = basename(filePath.replace(/%20/g, ' '))
 
-  const fullPath = normalize(join(await getDocumentFolder(), 'documents', filename))
+  const fullPath = join(await getDocumentFolder(), 'documents', filename)
 
   const error = await shell.openPath(fullPath)
 
   if (error) {
-    console.error('Failed to open file:', error)
+    console.error(error)
   }
 })
 
