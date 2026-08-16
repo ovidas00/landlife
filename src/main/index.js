@@ -1,5 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
-import { join, basename } from 'node:path'
+import { join, basename, normalize } from 'node:path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { getDB } from './db'
@@ -1254,8 +1254,16 @@ ipcMain.handle('delete-document', async (event, documentId) => {
 /* Utils */
 ipcMain.handle('open-file', async (event, filePath) => {
   if (!filePath) return
-  const path = join(await getDocumentFolder(), 'documents', basename(filePath))
-  await shell.openPath(path) // opens PDF in default system app
+
+  const filename = basename(decodeURIComponent(filePath))
+
+  const fullPath = normalize(join(await getDocumentFolder(), 'documents', filename))
+
+  const error = await shell.openPath(fullPath)
+
+  if (error) {
+    console.error('Failed to open file:', error)
+  }
 })
 
 /* Stats */
